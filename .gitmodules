@@ -1,0 +1,9 @@
+[submodule ".config/nvim"]
+	path = .config/nvim
+	url = git@github.com:griffinaddison/nvim.git
+[submodule ".config/tmux"]
+	path = .config/tmux
+	url = git@github.com:griffinaddison/tmux.git
+[submodule ".config/kitty"]
+	path = .config/kitty
+	url = git@github.com:griffinaddison/kitty.git
