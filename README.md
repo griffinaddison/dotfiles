@@ -3,6 +3,7 @@
 pre-requisites:
 
 
-installation:
+##installation:
 
-```cd && git clone --recurse-submodules git@github.com:griffinaddison/dotfiles.git ~/.dotfiles && cd ~/.dotfiles && stow . ```
+# flaky one-liner:
+```sudo apt-get install stow -y && cd && git clone --recurse-submodules https://github.com/griffinaddison/dotfiles.git ~/.dotfiles && cd ~/.dotfiles && stow . ```
