@@ -9,4 +9,4 @@
 	url = ../kitty.git
 [submodule ".config/kanata"]
 	path = .config/kanata
-	url = git@github.com:griffinaddison/kanata.git
+	url = ../kanata.git
