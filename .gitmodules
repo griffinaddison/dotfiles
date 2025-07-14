@@ -7,3 +7,6 @@
 [submodule ".config/kitty"]
 	path = .config/kitty
 	url = ../kitty.git
+[submodule ".config/kanata"]
+	path = .config/kanata
+	url = ../kanata.git
