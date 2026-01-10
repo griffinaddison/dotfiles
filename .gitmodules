@@ -10,3 +10,9 @@
 [submodule ".config/kanata"]
 	path = .config/kanata
 	url = ../kanata.git
+[submodule ".config/ghostty"]
+	path = .config/ghostty
+	url = ../ghostty.git
+[submodule ".config/skhd"]
+	path = .config/skhd
+	url = ../skhd.git
