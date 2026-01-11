@@ -39,7 +39,14 @@
       "Bash(printenv:*)",
       "Bash(tree:*)",
       "Bash(stat:*)",
-      "WebFetch"
+      "WebFetch",
+      "Bash(find:*)",
+      "Bash(sed ':*)",
+      "Bash(sed \":*)",
+      "Bash(sed -n ':*)",
+      "Bash(sed -n \":*)",
+      "Bash(sed -e ':*)",
+      "Bash(sed -e \":*)"
     ],
     "defaultMode": "plan"
   }
