@@ -1,6 +1,5 @@
 {
   "permissions": {
-    "defaultMode": "plan",
     "allow": [
       "WebSearch",
       "Bash(git status:*)",
@@ -39,7 +38,9 @@
       "Bash(env:*)",
       "Bash(printenv:*)",
       "Bash(tree:*)",
-      "Bash(stat:*)"
-    ]
+      "Bash(stat:*)",
+      "WebFetch"
+    ],
+    "defaultMode": "plan"
   }
 }
