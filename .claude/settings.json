@@ -1,5 +1,22 @@
 {
   "enabledPlugins": {
     "pyright-lsp@claude-plugins-official": true
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "notify-send 'Claude Code' 'Task complete' && printf '\\a'"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "/home/griffin/.claude/statusline.sh"
   }
 }
