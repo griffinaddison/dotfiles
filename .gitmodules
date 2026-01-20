@@ -16,3 +16,6 @@
 [submodule ".config/skhd"]
 	path = .config/skhd
 	url = ../skhd.git
+[submodule ".config/claude"]
+	path = .config/claude
+	url = ../claude.git
