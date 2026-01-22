@@ -385,7 +385,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "notify-send 'Claude Code' 'Task complete' && printf '\\a'"
+            "command": "dir=$(basename \"$PWD\") && if [[ \"$OSTYPE\" == darwin* ]]; then osascript -e \"display notification \\\"Task complete\\\" with title \\\"claude@$dir\\\"\"; else notify-send \"claude@$dir\" \"Task complete\"; fi && printf '\\a'"
           }
         ]
       }
