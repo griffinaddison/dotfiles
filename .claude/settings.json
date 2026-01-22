@@ -15,6 +15,7 @@
       "Bash(git fetch:*)",
       "Bash(git pull:*)",
       "Bash(git ls-files:*)",
+      "Bash(git ls-tree:*)",
       "Bash(git describe:*)",
       "Bash(git rev-parse:*)",
       "Bash(git blame:*)",
