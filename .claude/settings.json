@@ -89,6 +89,7 @@
       "Bash(stat:*)",
       "Bash(find:*)",
       "Bash(cat:*)",
+      "Bash(/bin/bash -c 'cat:*)",
       "Bash(head:*)",
       "Bash(tail:*)",
       "Bash(less:*)",
