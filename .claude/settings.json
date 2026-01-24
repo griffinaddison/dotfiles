@@ -9,6 +9,12 @@
       "Bash",
       "Bash(/home/griffin/.claude/statusline.sh)"
     ],
+    "additionalDirectories": [
+      "/opt/ros",
+      "/usr/include",
+      "/usr/local/include",
+      "/usr/share"
+    ],
     "deny": [
       "Bash(rm -rf /:*)",
       "Bash(rm -rf /*:*)",
