@@ -65,6 +65,17 @@
     "pyright-lsp@claude-plugins-official": true
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/cc-tmux-init.sh"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "",
@@ -72,6 +83,10 @@
           {
             "type": "command",
             "command": "dir=$(basename \"$PWD\") && if [[ \"$OSTYPE\" == darwin* ]]; then osascript -e \"display notification \\\"Task complete\\\" with title \\\"claude@$dir\\\"\"; else notify-send \"claude@$dir\" \"Task complete\"; fi && printf '\\a'"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/cc-tmux-update.sh"
           }
         ]
       }
