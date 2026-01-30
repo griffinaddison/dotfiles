@@ -105,14 +105,15 @@ echo "Ghostty nightly installed!"
 if command -v apt-get &> /dev/null; then
     echo "Installing Kanata..."
 
-    # Download and install binary
-    KANATA_URL=$(curl -fsSL "https://api.github.com/repos/jtroo/kanata/releases/latest" \
-        | grep "browser_download_url.*linux.*x64.zip\"" | cut -d '"' -f 4)
-    curl -fsSL -o /tmp/kanata.zip -L "$KANATA_URL"
-    unzip -o /tmp/kanata.zip -d /tmp
-    $SUDO mv /tmp/kanata_linux_x64 /usr/local/bin/kanata
-    $SUDO chmod +x /usr/local/bin/kanata
-    rm -f /tmp/kanata.zip /tmp/kanata_linux_*
+    # Install Rust if needed
+    if ! command -v cargo &> /dev/null; then
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        source "$HOME/.cargo/env"
+    fi
+
+    # Build and install kanata via cargo
+    cargo install kanata
+    $SUDO cp "$HOME/.cargo/bin/kanata" /usr/local/bin/
 
     # Copy config
     $SUDO mkdir -p /etc/kanata
