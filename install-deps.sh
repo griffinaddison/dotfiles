@@ -115,9 +115,9 @@ if command -v apt-get &> /dev/null; then
     cargo install kanata
     $SUDO cp "$HOME/.cargo/bin/kanata" /usr/local/bin/
 
-    # Copy config
+    # Copy Linux-specific config
     $SUDO mkdir -p /etc/kanata
-    $SUDO cp "$HOME/.config/kanata/kanata.kbd" /etc/kanata/
+    $SUDO cp "$HOME/.config/kanata/linux/kanata.kbd" /etc/kanata/
 
     # Install and enable systemd service
     $SUDO cp "$HOME/.config/kanata/linux/kanata.service" /etc/systemd/system/
