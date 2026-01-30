@@ -101,4 +101,30 @@ DESKTOP
 fi
 echo "Ghostty nightly installed!"
 
+# kanata (Linux only)
+if command -v apt-get &> /dev/null; then
+    echo "Installing Kanata..."
+
+    # Download and install binary
+    KANATA_URL=$(curl -fsSL "https://api.github.com/repos/jtroo/kanata/releases/latest" \
+        | grep "browser_download_url.*linux.*x64.zip\"" | cut -d '"' -f 4)
+    curl -fsSL -o /tmp/kanata.zip -L "$KANATA_URL"
+    unzip -o /tmp/kanata.zip -d /tmp/kanata
+    $SUDO mv /tmp/kanata/kanata /usr/local/bin/
+    $SUDO chmod +x /usr/local/bin/kanata
+    rm -rf /tmp/kanata /tmp/kanata.zip
+
+    # Copy config
+    $SUDO mkdir -p /etc/kanata
+    $SUDO cp "$HOME/.config/kanata/kanata.kbd" /etc/kanata/
+
+    # Install and enable systemd service
+    $SUDO cp "$HOME/.config/kanata/linux/kanata.service" /etc/systemd/system/
+    $SUDO systemctl daemon-reload
+    $SUDO systemctl enable kanata
+    $SUDO systemctl start kanata
+
+    echo "Kanata installed and started!"
+fi
+
 echo "Dependencies installed!"
