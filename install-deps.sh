@@ -82,6 +82,22 @@ elif command -v apt-get &> /dev/null; then
     curl -fsSL -o /tmp/ghostty.AppImage -L "$GHOSTTY_URL"
     chmod +x /tmp/ghostty.AppImage
     $SUDO mv /tmp/ghostty.AppImage /usr/local/bin/ghostty
+
+    # Desktop entry
+    $SUDO mkdir -p /usr/share/icons/hicolor/256x256/apps
+    $SUDO curl -fsSL -o /usr/share/icons/hicolor/256x256/apps/ghostty.png \
+        "https://raw.githubusercontent.com/ghostty-org/ghostty/main/images/icons/icon_256.png"
+
+    $SUDO tee /usr/share/applications/ghostty.desktop > /dev/null <<DESKTOP
+[Desktop Entry]
+Name=Ghostty
+Comment=Fast, feature-rich terminal emulator
+Exec=/usr/local/bin/ghostty
+Icon=ghostty
+Terminal=false
+Type=Application
+Categories=System;TerminalEmulator;
+DESKTOP
 fi
 echo "Ghostty nightly installed!"
 
