@@ -61,24 +61,19 @@ fi
 # ghostty
 echo "Installing Ghostty nightly..."
 if [[ "$(uname)" == "Darwin" ]]; then
-    # macOS
+    # macOS - from GitHub releases
     [[ -d /Applications/Ghostty.app ]] && rm -rf /Applications/Ghostty.app
 
     GHOSTTY_DMG="/tmp/ghostty.dmg"
-    curl -fsSL -o "$GHOSTTY_DMG" "https://release.files.ghostty.org/tip/macos/Ghostty.dmg"
+    curl -fsSL -o "$GHOSTTY_DMG" -L "https://github.com/ghostty-org/ghostty/releases/download/tip/Ghostty.dmg"
 
     hdiutil attach "$GHOSTTY_DMG" -quiet
     cp -R /Volumes/Ghostty/Ghostty.app /Applications/
     hdiutil detach /Volumes/Ghostty -quiet
     rm "$GHOSTTY_DMG"
 elif command -v apt-get &> /dev/null; then
-    # Ubuntu
-    [[ -f /usr/local/bin/ghostty ]] && $SUDO rm /usr/local/bin/ghostty
-
-    GHOSTTY_APPIMAGE="/tmp/ghostty.AppImage"
-    curl -fsSL -o "$GHOSTTY_APPIMAGE" "https://release.files.ghostty.org/tip/linux/x86_64/Ghostty.AppImage"
-    chmod +x "$GHOSTTY_APPIMAGE"
-    $SUDO mv "$GHOSTTY_APPIMAGE" /usr/local/bin/ghostty
+    # Ubuntu - community-maintained deb package
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/mkasberg/ghostty-ubuntu/HEAD/install.sh)"
 fi
 echo "Ghostty nightly installed!"
 
