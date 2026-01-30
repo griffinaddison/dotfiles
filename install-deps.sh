@@ -109,10 +109,10 @@ if command -v apt-get &> /dev/null; then
     KANATA_URL=$(curl -fsSL "https://api.github.com/repos/jtroo/kanata/releases/latest" \
         | grep "browser_download_url.*linux.*x64.zip\"" | cut -d '"' -f 4)
     curl -fsSL -o /tmp/kanata.zip -L "$KANATA_URL"
-    unzip -o /tmp/kanata.zip -d /tmp/kanata
-    $SUDO mv /tmp/kanata/kanata /usr/local/bin/
+    unzip -o /tmp/kanata.zip -d /tmp
+    $SUDO mv /tmp/kanata_linux_x64 /usr/local/bin/kanata
     $SUDO chmod +x /usr/local/bin/kanata
-    rm -rf /tmp/kanata /tmp/kanata.zip
+    rm -f /tmp/kanata.zip /tmp/kanata_linux_*
 
     # Copy config
     $SUDO mkdir -p /etc/kanata
