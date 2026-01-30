@@ -58,24 +58,28 @@ fi
 [[ ! -d ~/.tmux/plugins/tpm ]] && \
     git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 
-# ghostty (macOS only)
+# ghostty
+echo "Installing Ghostty nightly..."
 if [[ "$(uname)" == "Darwin" ]]; then
-    echo "Installing Ghostty nightly..."
-
-    # Remove existing installation
+    # macOS
     [[ -d /Applications/Ghostty.app ]] && rm -rf /Applications/Ghostty.app
 
-    # Download and install latest nightly
     GHOSTTY_DMG="/tmp/ghostty.dmg"
     curl -fsSL -o "$GHOSTTY_DMG" "https://release.files.ghostty.org/tip/macos/Ghostty.dmg"
 
-    # Mount, copy, unmount
     hdiutil attach "$GHOSTTY_DMG" -quiet
     cp -R /Volumes/Ghostty/Ghostty.app /Applications/
     hdiutil detach /Volumes/Ghostty -quiet
     rm "$GHOSTTY_DMG"
+elif command -v apt-get &> /dev/null; then
+    # Ubuntu
+    [[ -f /usr/local/bin/ghostty ]] && $SUDO rm /usr/local/bin/ghostty
 
-    echo "Ghostty nightly installed!"
+    GHOSTTY_APPIMAGE="/tmp/ghostty.AppImage"
+    curl -fsSL -o "$GHOSTTY_APPIMAGE" "https://release.files.ghostty.org/tip/linux/x86_64/Ghostty.AppImage"
+    chmod +x "$GHOSTTY_APPIMAGE"
+    $SUDO mv "$GHOSTTY_APPIMAGE" /usr/local/bin/ghostty
 fi
+echo "Ghostty nightly installed!"
 
 echo "Dependencies installed!"
