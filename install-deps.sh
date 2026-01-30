@@ -72,8 +72,16 @@ if [[ "$(uname)" == "Darwin" ]]; then
     hdiutil detach /Volumes/Ghostty -quiet
     rm "$GHOSTTY_DMG"
 elif command -v apt-get &> /dev/null; then
-    # Ubuntu - community-maintained deb package
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/mkasberg/ghostty-ubuntu/HEAD/install.sh)"
+    # Linux - AppImage (works on all distros including Ubuntu 22.04)
+    [[ -f /usr/local/bin/ghostty ]] && $SUDO rm /usr/local/bin/ghostty
+
+    ARCH=$(uname -m)
+    GHOSTTY_URL=$(curl -fsSL "https://api.github.com/repos/pkgforge-dev/ghostty-appimage/releases/latest" \
+        | grep "browser_download_url.*${ARCH}.AppImage\"" | cut -d '"' -f 4)
+
+    curl -fsSL -o /tmp/ghostty.AppImage -L "$GHOSTTY_URL"
+    chmod +x /tmp/ghostty.AppImage
+    $SUDO mv /tmp/ghostty.AppImage /usr/local/bin/ghostty
 fi
 echo "Ghostty nightly installed!"
 
