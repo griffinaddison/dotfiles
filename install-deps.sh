@@ -33,8 +33,8 @@ else
     exit 1
 fi
 
-# pyright
-pip install pyright
+# pyright (via npm)
+npm install -g pyright
 
 # n (node version manager) - skip on mac
 if [[ "$(uname)" != "Darwin" ]]; then
