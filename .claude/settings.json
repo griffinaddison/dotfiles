@@ -7,7 +7,7 @@
       "WebSearch",
       "WebFetch",
       "Bash",
-      "Bash(/home/griffin/.claude/statusline.sh)"
+      "Bash(~/.claude/statusline.sh)"
     ],
     "additionalDirectories": [
       "/opt/ros",
@@ -94,6 +94,6 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "/home/griffin/.claude/statusline.sh"
+    "command": "~/.claude/statusline.sh"
   }
 }
