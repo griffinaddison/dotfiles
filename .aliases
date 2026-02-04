@@ -1,0 +1,18 @@
+# Directory navigation
+alias up='cd ..'
+alias upp='cd ../..'
+alias uppp='cd ../../..'
+alias upppp='cd ../../../..'
+alias uppppp='cd ../../../../..'
+alias upppppp='cd ../../../../../..'
+alias uppppppp='cd ../../../../../../..'
+
+# Git
+alias gs='git status'
+alias gc='git commit -m'
+alias gd='git diff'
+alias gl='git log'
+alias gpl='git pull'
+alias gf='git fetch'
+alias gps='git push'
+alias gg='git log --graph --oneline --decorate --all'
