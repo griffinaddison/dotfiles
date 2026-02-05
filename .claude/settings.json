@@ -62,7 +62,9 @@
     "defaultMode": "plan"
   },
   "enabledPlugins": {
-    "pyright-lsp@claude-plugins-official": true
+    "pyright-lsp@claude-plugins-official": true,
+    "Notion@claude-plugins-official": true,
+    "slack@claude-plugins-official": true
   },
   "hooks": {
     "SessionStart": [
