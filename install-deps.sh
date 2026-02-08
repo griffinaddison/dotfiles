@@ -54,9 +54,7 @@ else
     luarocks install luasocket
 fi
 
-# tmux plugin manager
-[[ ! -d ~/.tmux/plugins/tpm ]] && \
-    git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+# tmux plugin manager - included as submodule in .config/tmux/plugins/tpm
 
 # ghostty
 echo "Installing Ghostty nightly..."
