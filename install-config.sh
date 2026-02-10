@@ -36,4 +36,10 @@ else
     echo "Aliases already sourced in $SHELL_RC"
 fi
 
+# Install Ghostty terminfo so tmux works over SSH from Ghostty
+if [[ -f "$DOTFILES_DIR/ghostty.terminfo" ]]; then
+    tic -x "$DOTFILES_DIR/ghostty.terminfo"
+    echo "Ghostty terminfo installed"
+fi
+
 echo "Config installed!"
