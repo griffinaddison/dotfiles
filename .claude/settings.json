@@ -9,12 +9,6 @@
       "Bash",
       "Bash(~/.claude/statusline.sh)"
     ],
-    "additionalDirectories": [
-      "/opt/ros",
-      "/usr/include",
-      "/usr/local/include",
-      "/usr/share"
-    ],
     "deny": [
       "Bash(rm -rf /:*)",
       "Bash(rm -rf /*:*)",
@@ -59,12 +53,13 @@
       "Bash(curl -s * | sh:*)",
       "Bash(curl -s * | bash:*)"
     ],
-    "defaultMode": "plan"
-  },
-  "enabledPlugins": {
-    "pyright-lsp@claude-plugins-official": true,
-    "Notion@claude-plugins-official": true,
-    "slack@claude-plugins-official": true
+    "defaultMode": "plan",
+    "additionalDirectories": [
+      "/opt/ros",
+      "/usr/include",
+      "/usr/local/include",
+      "/usr/share"
+    ]
   },
   "hooks": {
     "SessionStart": [
@@ -97,5 +92,10 @@
   "statusLine": {
     "type": "command",
     "command": "~/.claude/statusline.sh"
+  },
+  "enabledPlugins": {
+    "pyright-lsp@claude-plugins-official": true,
+    "Notion@claude-plugins-official": true,
+    "slack@claude-plugins-official": true
   }
 }

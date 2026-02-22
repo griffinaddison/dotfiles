@@ -11,7 +11,7 @@ if command -v apt-get &> /dev/null; then
     $SUDO apt-get install -y \
         build-essential gcc make cmake \
         lua5.4 liblua5.4-dev \
-        clangd-12 wget stow tmux \
+        clangd-12 wget stow tmux jq \
         software-properties-common
 
     # neovim from unstable ppa
@@ -26,7 +26,7 @@ if command -v apt-get &> /dev/null; then
 
 elif command -v brew &> /dev/null; then
     brew install \
-        lua luarocks neovim tmux ripgrep stow \
+        lua luarocks neovim tmux ripgrep stow jq \
         cmake node
 else
     echo "Unsupported package manager"
