@@ -36,8 +36,8 @@ fi
 # pyright (via npm)
 npm install -g pyright
 
-# n (node version manager) - skip on mac
-if [[ "$(uname)" != "Darwin" ]]; then
+# n (node version manager) - skip on mac, skip if already installed
+if [[ "$(uname)" != "Darwin" ]] && ! command -v n &> /dev/null; then
     curl -fsSL https://raw.githubusercontent.com/mklement0/n-install/stable/bin/n-install | bash -s -- -y 22
 fi
 
