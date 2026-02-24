@@ -61,6 +61,7 @@ set -o vi
 export KEYTIMEOUT=1 #faster esc apparently
 
 setopt PROMPT_SUBST
+setopt TRANSIENT_RPROMPT
 
 # Vim mode indicator in prompt
 function zle-keymap-select zle-line-init {
