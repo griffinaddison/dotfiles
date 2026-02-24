@@ -11,7 +11,7 @@ if command -v apt-get &> /dev/null; then
     $SUDO apt-get install -y \
         build-essential gcc make cmake \
         lua5.4 liblua5.4-dev \
-        clangd-12 wget stow tmux jq \
+        clangd-12 wget stow tmux jq zsh \
         software-properties-common
 
     # neovim from unstable ppa
@@ -124,6 +124,12 @@ if command -v apt-get &> /dev/null; then
     $SUDO systemctl start kanata
 
     echo "Kanata installed and started!"
+fi
+
+# Set zsh as default shell
+if command -v zsh &> /dev/null && [ "$SHELL" != "$(which zsh)" ]; then
+    echo "Setting zsh as default shell..."
+    chsh -s "$(which zsh)"
 fi
 
 echo "Dependencies installed!"
