@@ -20,9 +20,10 @@ if command -v apt-get &> /dev/null; then
     $SUDO apt-get install -y neovim
 
     # ripgrep
-    curl -LO https://github.com/BurntSushi/ripgrep/releases/download/14.1.0/ripgrep_14.1.0-1_amd64.deb
-    $SUDO dpkg -i ripgrep_14.1.0-1_amd64.deb
-    rm ripgrep_14.1.0-1_amd64.deb
+    RG_ARCH=$(dpkg --print-architecture)
+    curl -LO "https://github.com/BurntSushi/ripgrep/releases/download/14.1.0/ripgrep_14.1.0-1_${RG_ARCH}.deb"
+    $SUDO dpkg -i "ripgrep_14.1.0-1_${RG_ARCH}.deb"
+    rm "ripgrep_14.1.0-1_${RG_ARCH}.deb"
 
 elif command -v brew &> /dev/null; then
     brew install \
