@@ -122,11 +122,12 @@ if command -v apt-get &> /dev/null; then
     $SUDO cp "$HOME/.cargo/bin/kanata" /usr/local/bin/
 
     # Copy Linux-specific config
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     $SUDO mkdir -p /etc/kanata
-    $SUDO cp "$HOME/.config/kanata/linux/kanata.kbd" /etc/kanata/
+    $SUDO cp "$SCRIPT_DIR/.config/kanata/linux/kanata.kbd" /etc/kanata/
 
     # Install and enable systemd service
-    $SUDO cp "$HOME/.config/kanata/linux/kanata.service" /etc/systemd/system/
+    $SUDO cp "$SCRIPT_DIR/.config/kanata/linux/kanata.service" /etc/systemd/system/
     $SUDO systemctl daemon-reload
     $SUDO systemctl enable kanata
     $SUDO systemctl start kanata
