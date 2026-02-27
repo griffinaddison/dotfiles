@@ -40,13 +40,14 @@ else
     exit 1
 fi
 
-# pyright (via npm)
-npm install -g pyright
-
 # n (node version manager) - skip on mac, skip if already installed
 if [[ "$(uname)" != "Darwin" ]] && ! command -v n &> /dev/null; then
     curl -fsSL https://raw.githubusercontent.com/mklement0/n-install/stable/bin/n-install | bash -s -- -y 22
+    export N_PREFIX="$HOME/n"; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH="$N_PREFIX/bin:$PATH"
 fi
+
+# pyright (via npm)
+npm install -g pyright
 
 # luarocks + luasocket
 if command -v apt-get &> /dev/null; then
