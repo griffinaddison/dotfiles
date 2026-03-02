@@ -25,8 +25,13 @@ if command -v apt-get &> /dev/null; then
     $SUDO apt-get update
     $SUDO apt-get install -y \
         build-essential gcc make cmake \
-        clangd-12 wget stow tmux jq zsh \
+        wget stow tmux jq zsh \
         software-properties-common
+
+    # clangd - package name varies by distro
+    $SUDO apt-get install -y clangd-12 2>/dev/null \
+        || $SUDO apt-get install -y clangd 2>/dev/null \
+        || echo "Warning: clangd not found, skipping (C++ LSP)"
 
     # neovim - AppImage to ~/bin (no sudo, no system-wide PPA)
     echo "Installing Neovim AppImage..."
