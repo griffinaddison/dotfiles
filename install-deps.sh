@@ -36,8 +36,9 @@ if command -v apt-get &> /dev/null; then
     # neovim - AppImage to ~/bin (no sudo, no system-wide PPA)
     echo "Installing Neovim AppImage..."
     mkdir -p "$HOME/bin"
+    ARCH=$(uname -m)
     curl -fsSL -o "$HOME/bin/nvim" \
-        "https://github.com/neovim/neovim/releases/download/stable/nvim.appimage"
+        "https://github.com/neovim/neovim/releases/download/stable/nvim-linux-${ARCH}.appimage"
     chmod +x "$HOME/bin/nvim"
 
     # ripgrep
