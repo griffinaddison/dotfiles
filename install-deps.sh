@@ -62,8 +62,8 @@ else
     exit 1
 fi
 
-# n (node version manager) - skip on mac, skip if already installed
-if [[ "$(uname)" != "Darwin" ]] && ! command -v n &> /dev/null; then
+# n (node version manager) - skip on mac, skip if node/npm already available
+if [[ "$(uname)" != "Darwin" ]] && ! command -v node &> /dev/null; then
     curl -fsSL https://raw.githubusercontent.com/mklement0/n-install/stable/bin/n-install | bash -s -- -y 22
     export N_PREFIX="$HOME/n"; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH="$N_PREFIX/bin:$PATH"
 fi
