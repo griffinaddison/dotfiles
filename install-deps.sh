@@ -1,6 +1,21 @@
 #!/usr/bin/env bash
 set -e
 
+# Optional components
+INSTALL_GHOSTTY=false
+INSTALL_KANATA=false
+
+printf "\n=== Optional components ===\n"
+printf "Install Ghostty? [y/N]: "
+read -r ans < /dev/tty
+[[ "$ans" =~ ^[Yy] ]] && INSTALL_GHOSTTY=true
+
+printf "Install Kanata? [y/N]: "
+read -r ans < /dev/tty
+[[ "$ans" =~ ^[Yy] ]] && INSTALL_KANATA=true
+
+printf "\n"
+
 # Detect package manager
 if command -v apt-get &> /dev/null; then
     PKG="apt-get"
@@ -10,14 +25,15 @@ if command -v apt-get &> /dev/null; then
     $SUDO apt-get update
     $SUDO apt-get install -y \
         build-essential gcc make cmake \
-        lua5.4 liblua5.4-dev \
         clangd-12 wget stow tmux jq zsh \
         software-properties-common
 
-    # neovim from unstable ppa
-    $SUDO add-apt-repository -y ppa:neovim-ppa/unstable
-    $SUDO apt-get update
-    $SUDO apt-get install -y neovim
+    # neovim - AppImage to ~/bin (no sudo, no system-wide PPA)
+    echo "Installing Neovim AppImage..."
+    mkdir -p "$HOME/bin"
+    curl -fsSL -o "$HOME/bin/nvim" \
+        "https://github.com/neovim/neovim/releases/download/stable/nvim.appimage"
+    chmod +x "$HOME/bin/nvim"
 
     # ripgrep
     if [ "$(dpkg --print-architecture)" = "amd64" ]; then
@@ -33,7 +49,7 @@ if command -v apt-get &> /dev/null; then
 
 elif command -v brew &> /dev/null; then
     brew install \
-        lua luarocks neovim tmux ripgrep stow jq \
+        lua neovim tmux ripgrep stow jq \
         cmake node
 else
     echo "Unsupported package manager"
@@ -49,22 +65,10 @@ fi
 # pyright (via npm)
 npm install -g pyright
 
-# luarocks + luasocket
-if command -v apt-get &> /dev/null; then
-    cd /tmp
-    wget https://luarocks.org/releases/luarocks-3.11.1.tar.gz
-    tar zxpf luarocks-3.11.1.tar.gz
-    cd luarocks-3.11.1
-    ./configure && make && $SUDO make install
-    $SUDO luarocks install luasocket
-    cd && rm -rf /tmp/luarocks-3.11.1*
-else
-    luarocks install luasocket
-fi
-
 # tmux plugin manager - included as submodule in .config/tmux/plugins/tpm
 
 # ghostty
+if $INSTALL_GHOSTTY; then
 echo "Installing Ghostty nightly..."
 if [[ "$(uname)" == "Darwin" ]]; then
     # macOS - from GitHub releases
@@ -106,9 +110,10 @@ Categories=System;TerminalEmulator;
 DESKTOP
 fi
 echo "Ghostty nightly installed!"
+fi # INSTALL_GHOSTTY
 
 # kanata (Linux only)
-if command -v apt-get &> /dev/null; then
+if $INSTALL_KANATA && command -v apt-get &> /dev/null; then
     echo "Installing Kanata..."
 
     # Install Rust if needed
