@@ -80,5 +80,5 @@ zle -N zle-keymap-select
 zle -N zle-line-init
 RPROMPT='${VIM_MODE}'
 
-# === Prompt with current directory ===
-PROMPT='%F{cyan}%~%f %# '
+# === Prompt: user@host:path$ (bash-style) ===
+PROMPT='%n@%m:%~$ '
