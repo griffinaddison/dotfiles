@@ -68,8 +68,13 @@ if [[ "$(uname)" != "Darwin" ]] && ! command -v node &> /dev/null; then
     export N_PREFIX="$HOME/n"; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH="$N_PREFIX/bin:$PATH"
 fi
 
-# pyright (via npm)
-npm install -g pyright
+# pyright (via npm) - use local prefix if global is not writable
+if npm install -g pyright 2>/dev/null; then
+    :
+else
+    npm config set prefix "$HOME/.local"
+    npm install -g pyright
+fi
 
 # tmux plugin manager - included as submodule in .config/tmux/plugins/tpm
 
