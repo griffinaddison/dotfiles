@@ -154,7 +154,7 @@ fi
 # Set zsh as default shell
 if command -v zsh &> /dev/null && [ "$SHELL" != "$(which zsh)" ]; then
     echo "Setting zsh as default shell..."
-    chsh -s "$(which zsh)"
+    chsh -s "$(which zsh)" || echo "Warning: chsh failed (you can run zsh manually or set it in tmux.conf)"
 fi
 
 echo "Dependencies installed!"
