@@ -80,5 +80,5 @@ zle -N zle-keymap-select
 zle -N zle-line-init
 RPROMPT='${VIM_MODE}'
 
-# === Prompt: user@host:path$ (bash-style) ===
-PROMPT='%n@%m:%~$ '
+# === Prompt: user@host:path$ (bash-style with colors) ===
+PROMPT='%F{green}%n@%m%f:%F{cyan}%~%f$ '
