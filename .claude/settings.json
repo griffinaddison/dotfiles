@@ -96,6 +96,9 @@
   "enabledPlugins": {
     "pyright-lsp@claude-plugins-official": true,
     "Notion@claude-plugins-official": true,
-    "slack@claude-plugins-official": true
-  }
+    "slack@claude-plugins-official": true,
+    "clangd-lsp@claude-plugins-official": true
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "effortLevel": "medium"
 }
