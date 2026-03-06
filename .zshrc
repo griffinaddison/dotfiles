@@ -31,12 +31,29 @@ if [[ "$(uname)" == "Darwin" ]]; then
     command -v neofetch &>/dev/null && neofetch
 fi
 
+# === nvm ===
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+# === Navigation aliases ===
+alias up="cd .."
+alias upp="cd ../.."
+alias uppp="cd ../../.."
+alias upppp="cd ../../../.."
+alias uppppp="cd ../../../../.."
+
 # === Git aliases ===
 alias gs="git status"
+alias gps="git push"
 alias gd="git diff"
 alias gc="git commit -m"
-alias gps="git push"
 alias ga="git add"
+alias gg="git log --graph --oneline --all --pretty"
+alias gl="git log"
+alias gpl="git pull"
+alias gf="git fetch"
+alias gck="git checkout"
 
 # === Go paths ===
 [ -d ~/go ] && export GOPATH=$HOME/go
@@ -61,6 +78,15 @@ fi
 }
 export PATH
 
+# === Docker CLI completions ===
+fpath=(/Users/griffinaddison/.docker/completions $fpath)
+autoload -Uz compinit
+compinit
+
+# === Google Cloud SDK ===
+if [ -f '/Users/griffinaddison/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/griffinaddison/google-cloud-sdk/path.zsh.inc'; fi
+if [ -f '/Users/griffinaddison/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/griffinaddison/google-cloud-sdk/completion.zsh.inc'; fi
+
 # === Vi mode ===
 set -o vi
 export KEYTIMEOUT=1
@@ -82,3 +108,10 @@ RPROMPT='${VIM_MODE}'
 
 # === Prompt: user@host:path$ (bash-style with colors) ===
 PROMPT='%F{green}%n@%m%f:%F{cyan}%~%f$ '
+
+# === Additional tools ===
+export PATH=/Users/griffinaddison/.opencode/bin:$PATH
+export STM32_PRG_PATH=/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/MacOs/bin
+
+# Load custom aliases
+[ -f ~/.aliases ] && source ~/.aliases
