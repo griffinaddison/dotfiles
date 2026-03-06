@@ -1,6 +1,21 @@
 #!/usr/bin/env bash
 set -e
 
+# Optional components
+INSTALL_GHOSTTY=false
+INSTALL_KANATA=false
+
+printf "\n=== Optional components ===\n"
+printf "Install Ghostty? [y/N]: "
+read -r ans < /dev/tty
+[[ "$ans" =~ ^[Yy] ]] && INSTALL_GHOSTTY=true
+
+printf "Install Kanata? [y/N]: "
+read -r ans < /dev/tty
+[[ "$ans" =~ ^[Yy] ]] && INSTALL_KANATA=true
+
+printf "\n"
+
 # Detect package manager
 if command -v apt-get &> /dev/null; then
     PKG="apt-get"
@@ -10,53 +25,61 @@ if command -v apt-get &> /dev/null; then
     $SUDO apt-get update
     $SUDO apt-get install -y \
         build-essential gcc make cmake \
-        lua5.4 liblua5.4-dev \
-        clangd-12 wget stow tmux jq zsh \
+        wget stow tmux jq zsh \
         software-properties-common
 
-    # neovim from unstable ppa
-    $SUDO add-apt-repository -y ppa:neovim-ppa/unstable
-    $SUDO apt-get update
-    $SUDO apt-get install -y neovim
+    # clangd - package name varies by distro
+    $SUDO apt-get install -y clangd-12 2>/dev/null \
+        || $SUDO apt-get install -y clangd 2>/dev/null \
+        || echo "Warning: clangd not found, skipping (C++ LSP)"
+
+    # neovim - AppImage to ~/bin (no sudo, no system-wide PPA)
+    echo "Installing Neovim AppImage..."
+    mkdir -p "$HOME/bin"
+    ARCH=$(uname -m)
+    curl -fsSL -o "$HOME/bin/nvim" \
+        "https://github.com/neovim/neovim/releases/download/stable/nvim-linux-${ARCH}.appimage"
+    chmod +x "$HOME/bin/nvim"
 
     # ripgrep
-    curl -LO https://github.com/BurntSushi/ripgrep/releases/download/14.1.0/ripgrep_14.1.0-1_amd64.deb
-    $SUDO dpkg -i ripgrep_14.1.0-1_amd64.deb
-    rm ripgrep_14.1.0-1_amd64.deb
+    if [ "$(dpkg --print-architecture)" = "amd64" ]; then
+        curl -LO https://github.com/BurntSushi/ripgrep/releases/download/14.1.0/ripgrep_14.1.0-1_amd64.deb
+        $SUDO dpkg -i ripgrep_14.1.0-1_amd64.deb
+        rm ripgrep_14.1.0-1_amd64.deb
+    else
+        curl -LO https://github.com/BurntSushi/ripgrep/releases/download/14.1.0/ripgrep-14.1.0-aarch64-unknown-linux-gnu.tar.gz
+        tar xzf ripgrep-14.1.0-aarch64-unknown-linux-gnu.tar.gz
+        $SUDO cp ripgrep-14.1.0-aarch64-unknown-linux-gnu/rg /usr/local/bin/
+        rm -rf ripgrep-14.1.0-aarch64-unknown-linux-gnu ripgrep-14.1.0-aarch64-unknown-linux-gnu.tar.gz
+    fi
 
 elif command -v brew &> /dev/null; then
     brew install \
-        lua luarocks neovim tmux ripgrep stow jq \
+        lua neovim tmux ripgrep stow jq \
         cmake node
 else
     echo "Unsupported package manager"
     exit 1
 fi
 
-# pyright (via npm)
-npm install -g pyright
-
-# n (node version manager) - skip on mac, skip if already installed
-if [[ "$(uname)" != "Darwin" ]] && ! command -v n &> /dev/null; then
+# n (node version manager) - skip on mac, skip if node/npm already available
+if [[ "$(uname)" != "Darwin" ]] && ! command -v node &> /dev/null; then
     curl -fsSL https://raw.githubusercontent.com/mklement0/n-install/stable/bin/n-install | bash -s -- -y 22
+    export N_PREFIX="$HOME/n"; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH="$N_PREFIX/bin:$PATH"
 fi
 
-# luarocks + luasocket
-if command -v apt-get &> /dev/null; then
-    cd /tmp
-    wget https://luarocks.org/releases/luarocks-3.11.1.tar.gz
-    tar zxpf luarocks-3.11.1.tar.gz
-    cd luarocks-3.11.1
-    ./configure && make && $SUDO make install
-    $SUDO luarocks install luasocket
-    cd && rm -rf /tmp/luarocks-3.11.1*
+# pyright (via npm) - use local prefix if global is not writable
+if npm install -g pyright 2>/dev/null; then
+    :
 else
-    luarocks install luasocket
+    npm config set prefix "$HOME/.local"
+    npm install -g pyright
 fi
 
 # tmux plugin manager - included as submodule in .config/tmux/plugins/tpm
 
 # ghostty
+if $INSTALL_GHOSTTY; then
 echo "Installing Ghostty nightly..."
 if [[ "$(uname)" == "Darwin" ]]; then
     # macOS - from GitHub releases
@@ -98,9 +121,10 @@ Categories=System;TerminalEmulator;
 DESKTOP
 fi
 echo "Ghostty nightly installed!"
+fi # INSTALL_GHOSTTY
 
 # kanata (Linux only)
-if command -v apt-get &> /dev/null; then
+if $INSTALL_KANATA && command -v apt-get &> /dev/null; then
     echo "Installing Kanata..."
 
     # Install Rust if needed
@@ -114,11 +138,12 @@ if command -v apt-get &> /dev/null; then
     $SUDO cp "$HOME/.cargo/bin/kanata" /usr/local/bin/
 
     # Copy Linux-specific config
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     $SUDO mkdir -p /etc/kanata
-    $SUDO cp "$HOME/.config/kanata/linux/kanata.kbd" /etc/kanata/
+    $SUDO cp "$SCRIPT_DIR/.config/kanata/linux/kanata.kbd" /etc/kanata/
 
     # Install and enable systemd service
-    $SUDO cp "$HOME/.config/kanata/linux/kanata.service" /etc/systemd/system/
+    $SUDO cp "$SCRIPT_DIR/.config/kanata/linux/kanata.service" /etc/systemd/system/
     $SUDO systemctl daemon-reload
     $SUDO systemctl enable kanata
     $SUDO systemctl start kanata
@@ -129,7 +154,7 @@ fi
 # Set zsh as default shell
 if command -v zsh &> /dev/null && [ "$SHELL" != "$(which zsh)" ]; then
     echo "Setting zsh as default shell..."
-    chsh -s "$(which zsh)"
+    chsh -s "$(which zsh)" || echo "Warning: chsh failed (you can run zsh manually or set it in tmux.conf)"
 fi
 
 echo "Dependencies installed!"

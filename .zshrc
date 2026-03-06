@@ -1,64 +1,69 @@
-export RASPBIAN_ROOTFS=$HOME/raspberrypi/rootfs
-export PATH=/opt/cross-pi-gcc/bin:$PATH
-export RASPBERRY_VERSION=4
-export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+# === Cross-platform paths ===
+export PATH="$HOME/bin:$HOME/.local/bin:$PATH"
 
-# >>> conda initialize >>>
-# !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/Users/griffin/anaconda3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-else
-    if [ -f "/Users/griffin/anaconda3/etc/profile.d/conda.sh" ]; then
-        . "/Users/griffin/anaconda3/etc/profile.d/conda.sh"
+# === macOS-specific ===
+if [[ "$(uname)" == "Darwin" ]]; then
+    export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+    alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+
+    # Raspberry Pi cross-compilation
+    export RASPBIAN_ROOTFS=$HOME/raspberrypi/rootfs
+    export PATH="/opt/cross-pi-gcc/bin:$PATH"
+    export RASPBERRY_VERSION=4
+
+    # >>> conda initialize >>>
+    # !! Contents within this block are managed by 'conda init' !!
+    __conda_setup="$('/Users/griffin/anaconda3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+    if [ $? -eq 0 ]; then
+        eval "$__conda_setup"
     else
-        export PATH="/Users/griffin/anaconda3/bin:$PATH"
+        if [ -f "/Users/griffin/anaconda3/etc/profile.d/conda.sh" ]; then
+            . "/Users/griffin/anaconda3/etc/profile.d/conda.sh"
+        else
+            export PATH="/Users/griffin/anaconda3/bin:$PATH"
+        fi
     fi
-fi
-unset __conda_setup
-# <<< conda initialize <<<
-#
-#
-#
+    unset __conda_setup
+    # <<< conda initialize <<<
 
+    # neofetch on startup (macOS only)
+    command -v neofetch &>/dev/null && neofetch
+fi
+
+# === Git aliases ===
 alias gs="git status"
 alias gd="git diff"
 alias gc="git commit -m"
 alias gps="git push"
 alias ga="git add"
 
-# Run neofetch on terminal startup
-neofetch
-
-# Go paths
+# === Go paths ===
 [ -d ~/go ] && export GOPATH=$HOME/go
 [ "$GOPATH" ] && [ -d "$GOPATH/bin" ] && PATH="$PATH:$GOPATH/bin"
 
-if [ -d /opt/homebrew/opt/go/libexec ]
-then
-  export GOROOT=/opt/homebrew/opt/go/libexec
-else
-  if [ -d /opt/homebrew/opt/go ]
-  then
+if [ -d /opt/homebrew/opt/go/libexec ]; then
+    export GOROOT=/opt/homebrew/opt/go/libexec
+elif [ -d /opt/homebrew/opt/go ]; then
     export GOROOT=/opt/homebrew/opt/go
-  else
+else
     [ -d /usr/local/go ] && export GOROOT=/usr/local/go
-  fi
 fi
-[ -d ${GOROOT}/bin ] && {
-  if [ $(echo $PATH | grep -c ${GOROOT}/bin) -ne "1" ]; then
-    PATH="$PATH:${GOROOT}/bin"
-  fi
+[ -d "${GOROOT}/bin" ] && {
+    if [ $(echo $PATH | grep -c ${GOROOT}/bin) -ne "1" ]; then
+        PATH="$PATH:${GOROOT}/bin"
+    fi
 }
 [ -d $HOME/go/bin ] && {
-  if [ $(echo $PATH | grep -c $HOME/go/bin) -ne "1" ]; then
-    PATH="$PATH:$HOME/go/bin"
-  fi
+    if [ $(echo $PATH | grep -c $HOME/go/bin) -ne "1" ]; then
+        PATH="$PATH:$HOME/go/bin"
+    fi
 }
 export PATH
-eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# === Vi mode ===
 set -o vi
-export KEYTIMEOUT=1 #faster esc apparently
+export KEYTIMEOUT=1
 
 setopt PROMPT_SUBST
 setopt TRANSIENT_RPROMPT
@@ -75,5 +80,5 @@ zle -N zle-keymap-select
 zle -N zle-line-init
 RPROMPT='${VIM_MODE}'
 
-alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
-export PATH="$HOME/.local/bin:$PATH"
+# === Prompt: user@host:path$ (bash-style with colors) ===
+PROMPT='%F{green}%n@%m%f:%F{cyan}%~%f$ '

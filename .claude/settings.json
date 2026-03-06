@@ -79,7 +79,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "dir=$(basename \"$PWD\") && if [[ \"$OSTYPE\" == darwin* ]]; then osascript -e \"display notification \\\"Task complete\\\" with title \\\"claude@$dir\\\"\"; else notify-send \"claude@$dir\" \"Task complete\"; fi && printf '\\a'"
+            "command": "dir=$(basename \"$PWD\") && case \"$OSTYPE\" in darwin*) osascript -e \"display notification \\\"Task complete\\\" with title \\\"claude@$dir\\\"\" ;; *) notify-send \"claude@$dir\" \"Task complete\" 2>/dev/null ;; esac; printf '\\a'"
           },
           {
             "type": "command",
