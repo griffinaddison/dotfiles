@@ -10,7 +10,8 @@ fi
 
 cd "$DOTFILES_DIR"
 git submodule update --init --recursive
-stow .
+stow --adopt .
+git checkout -- .
 
 # Add aliases sourcing to shell rc file
 ALIAS_SOURCE='[ -f ~/.aliases ] && source ~/.aliases'
