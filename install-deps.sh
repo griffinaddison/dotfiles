@@ -42,6 +42,7 @@ if command -v apt-get &> /dev/null; then
     echo "Installing Neovim AppImage..."
     mkdir -p "$HOME/bin"
     ARCH=$(uname -m)
+    [[ "$ARCH" == "aarch64" ]] && ARCH="arm64" || ARCH="x86_64"
     curl -fsSL -o "$HOME/bin/nvim" \
         "https://github.com/neovim/neovim/releases/download/stable/nvim-linux-${ARCH}.appimage"
     chmod +x "$HOME/bin/nvim"
