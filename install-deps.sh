@@ -5,16 +5,21 @@ set -e
 INSTALL_GHOSTTY=false
 INSTALL_KANATA=false
 
-printf "\n=== Optional components ===\n"
-printf "Install Ghostty? [y/N]: "
-read -r ans < /dev/tty
-[[ "$ans" =~ ^[Yy] ]] && INSTALL_GHOSTTY=true
+if [[ -n "$DOTFILES_YES" ]]; then
+    [[ -n "$DOTFILES_GHOSTTY" ]] && INSTALL_GHOSTTY=true
+    [[ -n "$DOTFILES_KANATA" ]] && INSTALL_KANATA=true
+else
+    printf "\n=== Optional components ===\n"
+    printf "Install Ghostty? [y/N]: "
+    read -r ans < /dev/tty
+    [[ "$ans" =~ ^[Yy] ]] && INSTALL_GHOSTTY=true
 
-printf "Install Kanata? [y/N]: "
-read -r ans < /dev/tty
-[[ "$ans" =~ ^[Yy] ]] && INSTALL_KANATA=true
+    printf "Install Kanata? [y/N]: "
+    read -r ans < /dev/tty
+    [[ "$ans" =~ ^[Yy] ]] && INSTALL_KANATA=true
 
-printf "\n"
+    printf "\n"
+fi
 
 # Detect package manager
 if command -v apt-get &> /dev/null; then
