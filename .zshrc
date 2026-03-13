@@ -79,20 +79,17 @@ bindkey -v '^W' backward-kill-word      # ctrl-w: delete word past insert point
 bindkey -v '^U' backward-kill-line      # ctrl-u: delete line past insert point
 bindkey -v '^H' backward-delete-char    # ctrl-h (some terminals send this for backspace)
 
-setopt PROMPT_SUBST
-setopt TRANSIENT_RPROMPT
-
-# Vim mode indicator in prompt
+# Vim mode cursor shape (block=normal, beam=insert, like nvim)
 function zle-keymap-select zle-line-init {
     case $KEYMAP in
-        vicmd)      VIM_MODE="%K{#8fb573}%F{black} NORMAL %f%k" ;;
-        viins|main) VIM_MODE="%K{#56b6c2}%F{black} INSERT %f%k" ;;
+        vicmd)      echo -ne '\e[2 q' ;;  # block cursor
+        viins|main) echo -ne '\e[6 q' ;;  # beam cursor
     esac
-    zle reset-prompt
 }
 zle -N zle-keymap-select
 zle -N zle-line-init
-RPROMPT='${VIM_MODE}'
+# Reset to beam cursor when starting a new prompt
+precmd() { echo -ne '\e[6 q' }
 
 # === Prompt: user@host:path$ (bash-style with colors) ===
 PROMPT='%F{green}%n@%m%f:%F{cyan}%~%f$ '
