@@ -16,3 +16,6 @@ alias gpl='git pull'
 alias gf='git fetch'
 alias gps='git push'
 alias gg='git log --graph --oneline --decorate'
+
+# Slurm
+alias sq='squeue -p a3mega -o "%.10i %.15u %.8T %.10M %.5D %.5C %.20N" --sort=S'
