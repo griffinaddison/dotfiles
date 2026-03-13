@@ -30,7 +30,8 @@ if command -v apt-get &> /dev/null; then
     $SUDO apt-get update
     $SUDO apt-get install -y \
         build-essential gcc make cmake \
-        wget stow tmux jq zsh \
+        wget stow jq zsh \
+        libevent-dev ncurses-dev bison pkg-config \
         software-properties-common
 
     # clangd - package name varies by distro
@@ -80,6 +81,17 @@ if npm install -g pyright 2>/dev/null; then
 else
     npm config set prefix "$HOME/.local"
     npm install -g pyright
+fi
+
+# tmux - build from source for latest version (need >= 3.3a for allow-passthrough)
+if [[ "$PKG" == "apt-get" ]]; then
+    TMUX_VERSION="3.5a"
+    echo "Installing tmux ${TMUX_VERSION} from source..."
+    curl -fsSL -o /tmp/tmux-${TMUX_VERSION}.tar.gz \
+        "https://github.com/tmux/tmux/releases/download/${TMUX_VERSION}/tmux-${TMUX_VERSION}.tar.gz"
+    tar xzf /tmp/tmux-${TMUX_VERSION}.tar.gz -C /tmp
+    (cd /tmp/tmux-${TMUX_VERSION} && ./configure --prefix="$HOME/.local" && make -j"$(nproc)" && make install)
+    rm -rf /tmp/tmux-${TMUX_VERSION} /tmp/tmux-${TMUX_VERSION}.tar.gz
 fi
 
 # tmux plugin manager - included as submodule in .config/tmux/plugins/tpm
