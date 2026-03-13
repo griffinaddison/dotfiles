@@ -32,7 +32,8 @@ if command -v apt-get &> /dev/null; then
         build-essential gcc make cmake \
         wget stow jq zsh \
         libevent-dev ncurses-dev bison pkg-config \
-        software-properties-common
+        software-properties-common \
+        imagemagick luarocks
 
     # clangd - package name varies by distro
     $SUDO apt-get install -y clangd-12 2>/dev/null \
@@ -63,7 +64,7 @@ if command -v apt-get &> /dev/null; then
 elif command -v brew &> /dev/null; then
     brew install \
         lua neovim tmux ripgrep stow jq \
-        cmake node
+        cmake node imagemagick luarocks
 else
     echo "Unsupported package manager"
     exit 1
