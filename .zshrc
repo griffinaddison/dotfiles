@@ -1,5 +1,6 @@
 # === Cross-platform paths ===
-export PATH="$HOME/bin:$HOME/.local/bin:$PATH"
+export N_PREFIX="$HOME/n"
+export PATH="$HOME/bin:$HOME/.local/bin:$N_PREFIX/bin:$PATH"
 
 # === macOS-specific ===
 if [[ "$(uname)" == "Darwin" ]]; then
@@ -11,24 +12,6 @@ if [[ "$(uname)" == "Darwin" ]]; then
     export RASPBIAN_ROOTFS=$HOME/raspberrypi/rootfs
     export PATH="/opt/cross-pi-gcc/bin:$PATH"
     export RASPBERRY_VERSION=4
-
-    # >>> conda initialize >>>
-    # !! Contents within this block are managed by 'conda init' !!
-    __conda_setup="$('/Users/griffin/anaconda3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
-    if [ $? -eq 0 ]; then
-        eval "$__conda_setup"
-    else
-        if [ -f "/Users/griffin/anaconda3/etc/profile.d/conda.sh" ]; then
-            . "/Users/griffin/anaconda3/etc/profile.d/conda.sh"
-        else
-            export PATH="/Users/griffin/anaconda3/bin:$PATH"
-        fi
-    fi
-    unset __conda_setup
-    # <<< conda initialize <<<
-
-    # neofetch on startup (macOS only)
-    command -v neofetch &>/dev/null && neofetch
 fi
 
 # === nvm ===
@@ -89,7 +72,12 @@ if [ -f '/Users/griffinaddison/google-cloud-sdk/completion.zsh.inc' ]; then . '/
 
 # === Vi mode ===
 set -o vi
-export KEYTIMEOUT=1
+export KEYTIMEOUT=5
+bindkey -v '^?' backward-delete-char    # backspace past insert point
+bindkey -v '^[[3~' delete-char          # delete key in insert mode
+bindkey -v '^W' backward-kill-word      # ctrl-w: delete word past insert point
+bindkey -v '^U' backward-kill-line      # ctrl-u: delete line past insert point
+bindkey -v '^H' backward-delete-char    # ctrl-h (some terminals send this for backspace)
 
 setopt PROMPT_SUBST
 setopt TRANSIENT_RPROMPT
