@@ -80,10 +80,6 @@
           {
             "type": "command",
             "command": "dir=$(basename \"$PWD\") && case \"$OSTYPE\" in darwin*) osascript -e \"display notification \\\"Task complete\\\" with title \\\"claude@$dir\\\"\" ;; *) notify-send \"claude@$dir\" \"Task complete\" 2>/dev/null ;; esac; printf '\\a'"
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/cc-tmux-update.sh"
           }
         ]
       }
