@@ -16,9 +16,17 @@ fi
 ssh() {
     local host="${@: -1}"
     host="${host##*@}"
-    printf '\e]2;%s\e\\' "$host"
+    printf '\e]2;SSH: %s\e\\' "$host"
+    if [ -n "$TMUX" ]; then
+        tmux set pane-active-border-style fg=colour226
+        tmux set -p pane-border-style fg=colour58
+    fi
     command ssh "$@"
     printf '\e]2;%s\e\\' "$(hostname -s)"
+    if [ -n "$TMUX" ]; then
+        tmux set pane-active-border-style fg=colour70
+        tmux set -p pane-border-style fg=colour22
+    fi
 }
 
 # Git
