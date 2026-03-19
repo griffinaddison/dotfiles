@@ -7,6 +7,20 @@ alias uppppp='cd ../../../../..'
 alias upppppp='cd ../../../../../..'
 alias uppppppp='cd ../../../../../../..'
 
+# Set tmux pane title to hostname
+if [ -n "$TMUX" ]; then
+    PROMPT_COMMAND='echo -ne "\e]2;$(hostname -s)\e\\"'
+fi
+
+# Wrap ssh to update tmux pane title with remote hostname
+ssh() {
+    local host="${@: -1}"
+    host="${host##*@}"
+    printf '\e]2;%s\e\\' "$host"
+    command ssh "$@"
+    printf '\e]2;%s\e\\' "$(hostname -s)"
+}
+
 # Git
 alias gs='git status'
 alias gc='git commit -m'

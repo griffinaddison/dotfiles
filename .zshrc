@@ -78,6 +78,7 @@ bindkey -v '^[[3~' delete-char          # delete key in insert mode
 bindkey -v '^W' backward-kill-word      # ctrl-w: delete word past insert point
 bindkey -v '^U' backward-kill-line      # ctrl-u: delete line past insert point
 bindkey -v '^H' backward-delete-char    # ctrl-h (some terminals send this for backspace)
+bindkey -v '^R' history-incremental-search-backward  # ctrl-r: search history
 
 # Vim mode cursor shape (block=normal, beam=insert, like nvim)
 function zle-keymap-select zle-line-init {
@@ -89,7 +90,10 @@ function zle-keymap-select zle-line-init {
 zle -N zle-keymap-select
 zle -N zle-line-init
 # Reset to beam cursor when starting a new prompt
-precmd() { echo -ne '\e[6 q' }
+precmd() {
+    echo -ne '\e[6 q'
+    echo -ne "\e]2;$(hostname -s)\e\\"
+}
 
 # === Prompt: user@host:path$ (bash-style with colors) ===
 PROMPT='%F{green}%n@%m%f:%F{cyan}%~%f$ '
