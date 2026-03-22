@@ -41,3 +41,6 @@ alias gg='git log --graph --oneline --decorate'
 
 # Slurm
 alias sq='squeue -p a3mega -o "%.10i %.15u %.8T %.10M %.5D %.5C %.20N" --sort=S'
+
+# Claude Code
+alias claude-discord-danger='claude --dangerously-skip-permissions --channels plugin:discord@claude-plugins-official'
