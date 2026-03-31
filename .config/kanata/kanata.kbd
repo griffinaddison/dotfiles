@@ -30,15 +30,6 @@ configuration entries.
   process-unmapped-keys yes
 )
 
-;; (defsrc
-;;   caps
-;;  spc
-;;  h
-;;  j
-;;  k
-;;  l
-;; )
-
 (defsrc
     esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
     lsgt 1    2    3    4    5    6    7    8    9    0    -    =    bspc
@@ -48,18 +39,7 @@ configuration entries.
     fn   lctl lalt lmet           spc            rmet ralt
 )
 
-;; (deflayer default
-;;  @cap
-;;  @spacefn
-;;  h
-;;  j
-;;  k
-;;  l
-;;)
-
 (deflayer default
-    ;; everything is exactly the same, only the f-row is changed.
-    ;; you can of course change any of the other mappings.
     grv  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
     lsgt 1    2    3    4    5    6    7    8    9    0    -    =    bspc
     tab  q    w    e    r    t    y    u    i    o    p    [    ]
@@ -68,25 +48,12 @@ configuration entries.
     fn   lctl lalt lmet           @spacefn            rmet ralt
 )
 
-
-
 (defalias
   cap (tap-hold-press 200 9999 esc lctl)
   spacefn (tap-hold-release-keys 200 9999 spc (layer-while-held spacefn) (lsft rsft))
 )
 
-;; (deflayer spacefn
-;;   @cap
-;;   @spacefn
-;;   left
-;;   down
-;;   up
-;;   right
-;; )
-
 (deflayer spacefn
-    ;; everything is exactly the same, only the f-row is changed.
-    ;; you can of course change any of the other mappings.
     esc  🔅   🔆    ✗    ✗    ✗    ✗    ◀◀   ▶⏸   ▶▶   🔇   🔉   🔊
     lsgt 🔅    🔆    3    4    ◀◀    ▶⏸    ▶▶    🔇    🔉    🔊    -    =    bspc
     tab  q    w    e    r    t    y    u    i    o    p    [    ]
@@ -94,14 +61,3 @@ configuration entries.
     lsft grv  z    x    c    v    b    n    m    ,    .    /    rsft
     fn   lctl lalt lmet           @spacefn            rmet ralt
 )
-
-;; (deflayer default
-;;     ;; everything is exactly the same, only the f-row is changed.
-;;     ;; you can of course change any of the other mappings.
-;;     esc  🔅   🔆    ✗    ✗    ✗    ✗    ◀◀   ▶⏸   ▶▶   🔇   🔉   🔊
-;;     lsgt 🔅    🔆    3    4    ◀◀    ▶⏸    ▶▶    🔇    🔉    🔊    -    =    bspc
-;;     tab  q    w    e    r    t    y    u    i    o    p    [    ]
-;;     @cap a    s    d    f    g    left    down    up    right    ;    '    \    ret
-;;     lsft grv  z    x    c    v    b    n    m    ,    .    /    rsft
-;;     fn   lctl lalt lmet           @spacefn            rmet ralt
-;; )
