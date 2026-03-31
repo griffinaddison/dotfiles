@@ -43,4 +43,13 @@ if [[ -f "$DOTFILES_DIR/ghostty.terminfo" ]]; then
     echo "Ghostty terminfo installed"
 fi
 
+# Set Claude Code to vim mode
+CLAUDE_JSON="$HOME/.claude.json"
+if [[ -f "$CLAUDE_JSON" ]]; then
+    jq '.editorMode = "vim"' "$CLAUDE_JSON" > "$CLAUDE_JSON.tmp" && mv "$CLAUDE_JSON.tmp" "$CLAUDE_JSON"
+else
+    echo '{"editorMode":"vim"}' > "$CLAUDE_JSON"
+fi
+echo "Claude Code vim mode set"
+
 echo "Config installed!"
