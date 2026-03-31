@@ -1,0 +1,107 @@
+#|
+This minimal config changes Caps Lock to act as Caps Lock on quick tap, but
+if held, it will act as Left Ctrl. It also changes the backtick/grave key to
+act as backtick/grave on quick tap, but change ijkl keys to arrow keys on hold.
+
+This text between the two pipe+octothorpe sequences is a multi-line comment.
+|#
+
+;; Text after double-semicolons are single-line comments.
+
+#|
+One defcfg entry may be added, which is used for configuration key-pairs. These
+configurations change kanata's behaviour at a more global level than the other
+configuration entries.
+|#
+
+
+;; griffin: i used this for config setup on mac: https://www.reddit.com/r/ErgoMechKeyboards/comments/1fojvif/comment/mg54mz1/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
+
+(defcfg
+  #|
+  This configuration will process all keys pressed inside of kanata, even if
+  they are not mapped in defsrc. This is so that certain actions can activate
+  at the right time for certain input sequences. By default, unmapped keys are
+  not processed through kanata due to a Windows issue related to AltGr. If you
+  use AltGr in your keyboard, you will likely want to follow the simple.kbd
+  file while unmapping lctl and ralt from defsrc.
+  |#
+
+  process-unmapped-keys yes
+)
+
+;; (defsrc
+;;   caps
+;;  spc
+;;  h
+;;  j
+;;  k
+;;  l
+;; )
+
+(defsrc
+    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+    lsgt 1    2    3    4    5    6    7    8    9    0    -    =    bspc
+    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    caps a    s    d    f    g    h    j    k    l    ;    '    \    ret
+    lsft grv  z    x    c    v    b    n    m    ,    .    /    rsft
+    fn   lctl lalt lmet           spc            rmet ralt
+)
+
+;; (deflayer default
+;;  @cap
+;;  @spacefn
+;;  h
+;;  j
+;;  k
+;;  l
+;;)
+
+(deflayer default
+    ;; everything is exactly the same, only the f-row is changed.
+    ;; you can of course change any of the other mappings.
+    grv  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+    lsgt 1    2    3    4    5    6    7    8    9    0    -    =    bspc
+    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    @cap a    s    d    f    g    h    j    k    l    ;    '    \    ret
+    lsft grv  z    x    c    v    b    n    m    ,    .    /    rsft
+    fn   lctl lalt lmet           @spacefn            rmet ralt
+)
+
+
+
+(defalias
+  cap (tap-hold-press 200 9999 esc lctl)
+  spacefn (tap-hold-release-keys 200 9999 spc (layer-while-held spacefn) (lsft rsft))
+)
+
+;; (deflayer spacefn
+;;   @cap
+;;   @spacefn
+;;   left
+;;   down
+;;   up
+;;   right
+;; )
+
+(deflayer spacefn
+    ;; everything is exactly the same, only the f-row is changed.
+    ;; you can of course change any of the other mappings.
+    esc  🔅   🔆    ✗    ✗    ✗    ✗    ◀◀   ▶⏸   ▶▶   🔇   🔉   🔊
+    lsgt 🔅    🔆    3    4    ◀◀    ▶⏸    ▶▶    🔇    🔉    🔊    -    =    bspc
+    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    @cap a    s    d    f    g    left    down    up    right    ;    '    \    ret
+    lsft grv  z    x    c    v    b    n    m    ,    .    /    rsft
+    fn   lctl lalt lmet           @spacefn            rmet ralt
+)
+
+;; (deflayer default
+;;     ;; everything is exactly the same, only the f-row is changed.
+;;     ;; you can of course change any of the other mappings.
+;;     esc  🔅   🔆    ✗    ✗    ✗    ✗    ◀◀   ▶⏸   ▶▶   🔇   🔉   🔊
+;;     lsgt 🔅    🔆    3    4    ◀◀    ▶⏸    ▶▶    🔇    🔉    🔊    -    =    bspc
+;;     tab  q    w    e    r    t    y    u    i    o    p    [    ]
+;;     @cap a    s    d    f    g    left    down    up    right    ;    '    \    ret
+;;     lsft grv  z    x    c    v    b    n    m    ,    .    /    rsft
+;;     fn   lctl lalt lmet           @spacefn            rmet ralt
+;; )

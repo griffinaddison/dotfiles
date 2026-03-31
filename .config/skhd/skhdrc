@@ -1,0 +1,4 @@
+cmd + alt - s : open -a "Slack"
+cmd + alt - t : open -a "Ghostty"
+cmd + alt - c : open -a "Google Chrome"
+cmd + alt - f : open -a "Finder"

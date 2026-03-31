@@ -34,7 +34,6 @@ dotpull() {
     cd ~/.dotfiles \
         && git fetch --all \
         && git reset --hard origin/main \
-        ; git submodule update --init --recursive --force \
         ; stow --adopt . \
         && git checkout -- . \
         ; tmux source-file ~/.config/tmux/tmux.conf 2>/dev/null \
