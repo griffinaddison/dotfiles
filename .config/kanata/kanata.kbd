@@ -56,7 +56,7 @@ configuration entries.
 (deflayer spacefn
     esc  🔅   🔆    ✗    ✗    ✗    ✗    ◀◀   ▶⏸   ▶▶   🔇   🔉   🔊
     lsgt 🔅    🔆    3    4    ◀◀    ▶⏸    ▶▶    🔇    🔉    🔊    -    =    bspc
-    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    tab  q    w    e    r    t    y    ◀◀    ▶⏸    ▶▶    p    [    ]
     @cap a    s    d    f    g    left    down    up    right    ;    '    \    ret
     lsft grv  z    x    c    v    b    n    m    ,    .    /    rsft
     fn   lctl lalt lmet           @spacefn            rmet ralt
