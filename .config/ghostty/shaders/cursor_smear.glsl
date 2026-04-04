@@ -97,7 +97,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Wavelengths: R=650nm, G=550nm, B=450nm
     // Dispersion offset ∝ (n(λ) - n_ref), normalized so green is zero.
     // Cauchy B coefficient scaled for visual effect.
-    float cauchyB = 8000.0; // nm² — controls dispersion spread
+    float cauchyB = 40000.0; // nm² — controls dispersion spread
     float nR = cauchyB / (650.0 * 650.0); // 0.0189
     float nG = cauchyB / (550.0 * 550.0); // 0.0264
     float nB = cauchyB / (450.0 * 450.0); // 0.0395
@@ -111,7 +111,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float radialScale = perpDist / max(trailRadius, 1.0);
     radialScale = smoothstep(0.0, 1.0, radialScale); // smooth ramp from center
 
-    float aberration = 120.0; // overall aberration strength in pixels
+    float aberration = 400.0; // overall aberration strength in pixels
     float abScale = aberration * smearAmount * tailBias * radialScale / SMEAR_STRENGTH;
     vec2 uvR = clamp((fragCoord + offset + smearDir * dispR * abScale) / iResolution.xy, 0.0, 1.0);
     vec2 uvG = clamp((fragCoord + offset + smearDir * dispG * abScale) / iResolution.xy, 0.0, 1.0);
