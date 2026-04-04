@@ -2,7 +2,7 @@
 // Stretches and smears the terminal content in the direction of cursor movement,
 // like a cartoon character being squash-and-stretched mid-dash.
 
-const float FADE_DURATION = 0.4;    // seconds — longer visible smear
+const float FADE_DURATION = 0.15;   // seconds — viscous time constant τ
 const float SMEAR_STRENGTH = 28.0;  // max pixel offset multiplier
 const float SMEAR_RADIUS = 90.0;    // pixels — wider area affected
 
@@ -26,7 +26,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float moveIntensity = smoothstep(3.0, 40.0, jumpDist);
 
     float timeSince = iTime - iTimeCursorChange;
-    float timeFade = 1.0 - smoothstep(0.0, FADE_DURATION, timeSince);
+    // Exponential viscous dissipation: dE/dt = -E/τ → E(t) = e^{-t/τ}
+    float timeFade = exp(-timeSince / FADE_DURATION);
     float intensity = moveIntensity * timeFade;
 
     if (intensity < 0.001) {
@@ -72,12 +73,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // The "tail" trails behind the cursor's destination.
     float tailBias = pow(alongTrail, 2.0);
 
-    // Directional bias: pixels directly behind the cursor (along motion axis)
-    // get much more displacement than pixels off to the side.
-    // This makes the smear clearly directional like a comet tail.
+    // Stokeslet angular dependence: the 2D Stokeslet velocity tensor has
+    // v_i ∝ (-δ_ij ln r + r_i r_j / r²), giving a cos²θ lobe along the
+    // force direction. Strongest in the wake (behind cursor), zero perpendicular.
     vec2 perpDir = vec2(-moveDir.y, moveDir.x);
     float perpDist = abs(dot(fragCoord - curCenter, perpDir));
-    float directionalFocus = exp(-perpDist * perpDist / (trailRadius * trailRadius * 0.12));
+    vec2 toFrag = fragCoord - curCenter;
+    float toFragLen = length(toFrag);
+    float cosTheta = (toFragLen > 0.1) ? dot(normalize(toFrag), smearDir) : 1.0;
+    // Wake lobe (behind cursor): cos²θ. Front lobe: attenuated to ~25%.
+    // This matches the pressure asymmetry in Stokes drag — high pressure
+    // ahead of the body is weaker than the low-pressure wake behind it.
+    float frontAtten = (cosTheta < 0.0) ? 0.25 : 1.0;
+    float directionalFocus = pow(cosTheta * cosTheta, 2.0) * frontAtten;
 
     float smearAmount = intensity * trailInfluence * directionalFocus * SMEAR_STRENGTH;
 
