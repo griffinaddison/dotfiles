@@ -48,8 +48,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float trailRadius = sqrt(baseRadius * baseRadius + diffusionCoeff * timeSince);
     trailRadius = min(trailRadius, SMEAR_RADIUS);
 
-    float distToTrail = sdfSegment(fragCoord, curCenter, prevCenter);
+    // Gravity: trail sags downward over time (0.5 * g * t², screen +Y is up)
+    float gravity = 80.0; // px/s² — subtle buoyant drift
+    vec2 gravityOffset = vec2(0.0, -0.5 * gravity * timeSince * timeSince);
+
+    float distToTrail = sdfSegment(fragCoord - gravityOffset, curCenter, prevCenter);
     float trailInfluence = 1.0 - smoothstep(0.0, trailRadius, distToTrail);
+
+    // Conservation of mass: opacity scales inversely with trail area (∝ 1/radius)
+    float densityFalloff = baseRadius / max(trailRadius, baseRadius);
+    trailInfluence *= densityFalloff;
 
     // Smear direction (opposite of movement — pixels "lag behind")
     vec2 moveDir = normalize(delta);
@@ -77,19 +85,41 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 smearUV = (fragCoord + offset) / iResolution.xy;
     smearUV = clamp(smearUV, 0.0, 1.0);
 
-    // Multi-sample along smear direction for motion-blur effect
+    // Chromatic aberration via Cauchy dispersion: n(λ) = A + B/λ²
+    // Wavelengths: R=650nm, G=550nm, B=450nm
+    // Dispersion offset ∝ (n(λ) - n_ref), normalized so green is zero.
+    // Cauchy B coefficient scaled for visual effect.
+    float cauchyB = 8000.0; // nm² — controls dispersion spread
+    float nR = cauchyB / (650.0 * 650.0); // 0.0189
+    float nG = cauchyB / (550.0 * 550.0); // 0.0264
+    float nB = cauchyB / (450.0 * 450.0); // 0.0395
+    // Relative to green (center channel): red bends less, blue bends more
+    float dispR = nR - nG; // negative (less refraction)
+    float dispG = 0.0;
+    float dispB = nB - nG; // positive (more refraction) — and |dispB| > |dispR|
+
+    // Radial scaling: aberration is zero on the optical axis (trail center)
+    // and increases toward the periphery, like a real lens.
+    float radialScale = perpDist / max(trailRadius, 1.0);
+    radialScale = smoothstep(0.0, 1.0, radialScale); // smooth ramp from center
+
+    float aberration = 120.0; // overall aberration strength in pixels
+    float abScale = aberration * smearAmount * tailBias * radialScale / SMEAR_STRENGTH;
+    vec2 uvR = clamp((fragCoord + offset + smearDir * dispR * abScale) / iResolution.xy, 0.0, 1.0);
+    vec2 uvG = clamp((fragCoord + offset + smearDir * dispG * abScale) / iResolution.xy, 0.0, 1.0);
+    vec2 uvB = clamp((fragCoord + offset + smearDir * dispB * abScale) / iResolution.xy, 0.0, 1.0);
+
     vec4 original = texture(iChannel0, uv);
-    vec4 smeared = texture(iChannel0, smearUV);
-    // Extra samples along the offset for streakier look
-    vec4 smeared2 = texture(iChannel0, clamp((fragCoord + offset * 0.5) / iResolution.xy, 0.0, 1.0));
-    vec4 smeared3 = texture(iChannel0, clamp((fragCoord + offset * 0.25) / iResolution.xy, 0.0, 1.0));
-    // Weighted toward the sharp original-offset sample, less blur
-    smeared = smeared * 0.6 + smeared2 * 0.25 + smeared3 * 0.15;
+    vec4 smeared;
+    smeared.r = texture(iChannel0, uvR).r;
+    smeared.g = texture(iChannel0, uvG).g;
+    smeared.b = texture(iChannel0, uvB).b;
+    smeared.a = 1.0;
 
     float blend = trailInfluence * directionalFocus * intensity * 0.65;
     fragColor = mix(original, smeared, blend);
 
     // Cartoon cloud: soft white haze that follows the smear shape
-    float cloudAlpha = blend * tailBias * 0.06;
+    float cloudAlpha = blend * tailBias * 0.12;
     fragColor.rgb = mix(fragColor.rgb, vec3(1.0), cloudAlpha);
 }
