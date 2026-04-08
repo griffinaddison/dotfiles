@@ -107,3 +107,7 @@ export STM32_PRG_PATH=/Applications/STMicroelectronics/STM32Cube/STM32CubeProgra
 
 # Load custom aliases
 [ -f ~/.aliases ] && source ~/.aliases
+
+
+
+alias quickstart_mac="HOST_MACHINE_HOSTNAME=sim-robot-001 USE_CPP_RECORDER=true ./quick_start.sh --dev --vr-on-mac --no-tailscale --no-stain-detection"
