@@ -631,6 +631,50 @@ require("lazy").setup({
     },
 
     {
+      "sindrets/diffview.nvim",
+      dependencies = { "nvim-lua/plenary.nvim" },
+      cmd = { "DiffviewOpen", "DiffviewClose", "DiffviewFileHistory" },
+      keys = {
+        { "<leader>gd", "<cmd>DiffviewOpen<cr>", desc = "Diffview: open" },
+        { "<leader>gc", "<cmd>DiffviewClose<cr>", desc = "Diffview: close" },
+        { "<leader>gh", "<cmd>DiffviewFileHistory %<cr>", desc = "Diffview: file history" },
+        { "<leader>pl", function()
+          -- Open current file:line(s) as a GitHub permalink (blob at current commit SHA).
+          -- Works in normal mode (single line) and visual mode (line range).
+          local bufname = vim.api.nvim_buf_get_name(0)
+          local mode = vim.fn.mode()
+          local line1, line2
+          if mode == "v" or mode == "V" or mode == "\22" then
+            line1 = vim.fn.line("v")
+            line2 = vim.fn.line(".")
+            if line1 > line2 then line1, line2 = line2, line1 end
+            vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
+          else
+            line1 = vim.fn.line(".")
+            line2 = line1
+          end
+          -- Get repo-relative path
+          local root = vim.fn.systemlist("git rev-parse --show-toplevel")[1]
+          local rel = bufname:sub(#root + 2)
+          -- Get repo slug from remote
+          local remote = vim.fn.systemlist("git remote get-url origin")[1] or ""
+          local repo = remote:match("github%.com[:/](.+)%.git") or remote:match("github%.com[:/](.+)")
+          if not repo then
+            vim.notify("Not a GitHub repo", vim.log.levels.WARN)
+            return
+          end
+          -- Use current commit SHA for a stable permalink
+          local sha = vim.fn.systemlist("git rev-parse HEAD")[1]
+          local anchor = (line1 == line2) and string.format("#L%d", line1) or string.format("#L%d-L%d", line1, line2)
+          local url = string.format("https://github.com/%s/blob/%s/%s%s", repo, sha, rel, anchor)
+          vim.fn.setreg("+", url)
+          vim.notify("Copied: " .. url)
+          vim.fn.system({ "open", url })
+        end, mode = { "n", "v" }, desc = "Permalink: open line(s) on GitHub" },
+      },
+    },
+
+    {
       "kylechui/nvim-surround",
       version = "*", -- Use for stability; omit to use `main` branch for the latest features
       event = "VeryLazy",
