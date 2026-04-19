@@ -43,6 +43,21 @@ if [[ -f "$DOTFILES_DIR/ghostty.terminfo" ]]; then
     echo "Ghostty terminfo installed"
 fi
 
+# Symlink the OS-specific kanata config to ~/.config/kanata/kanata.kbd
+# (kanata configs diverge: Mac has `fn`, Linux does not)
+if [[ "$OSTYPE" == darwin* ]]; then
+    KANATA_VARIANT="mac"
+else
+    KANATA_VARIANT="linux"
+fi
+KANATA_SRC="$DOTFILES_DIR/.config/kanata/$KANATA_VARIANT/kanata.kbd"
+KANATA_DST="$HOME/.config/kanata/kanata.kbd"
+if [[ -f "$KANATA_SRC" ]]; then
+    mkdir -p "$(dirname "$KANATA_DST")"
+    ln -sfn "$KANATA_SRC" "$KANATA_DST"
+    echo "Kanata config linked: $KANATA_DST -> $KANATA_SRC"
+fi
+
 # Set Claude Code to vim mode
 CLAUDE_JSON="$HOME/.claude.json"
 if [[ -f "$CLAUDE_JSON" ]]; then

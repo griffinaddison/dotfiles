@@ -36,9 +36,25 @@ dotpull() {
         && git reset --hard origin/main \
         ; stow --adopt . \
         && git checkout -- . \
+        ; _dotpull_link_kanata \
         ; tmux source-file ~/.config/tmux/tmux.conf 2>/dev/null \
         ; ~/.config/tmux/plugins/tpm/bin/install_plugins 2>/dev/null
     cd -
+}
+
+# Symlink OS-specific kanata config (mac has `fn`, linux does not)
+_dotpull_link_kanata() {
+    local variant
+    if [[ "$OSTYPE" == darwin* ]]; then
+        variant="mac"
+    else
+        variant="linux"
+    fi
+    local src="$HOME/.dotfiles/.config/kanata/$variant/kanata.kbd"
+    local dst="$HOME/.config/kanata/kanata.kbd"
+    [ -f "$src" ] || return 0
+    mkdir -p "$(dirname "$dst")"
+    ln -sfn "$src" "$dst"
 }
 
 # Git
