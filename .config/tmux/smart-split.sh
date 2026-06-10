@@ -33,6 +33,33 @@ for child_pid in $child_pids; do
     fi
 done
 
+# Check if the pane is running nvim — open the active buffer's file in a new nvim.
+# nvim >= 0.10 splits into a TUI client + `nvim --embed` server; the RPC socket is
+# named after the embed pid (older single-process nvims use the TUI pid). ps needs
+# -A because the embed server has no controlling terminal.
+if [[ "$pane_cmd" == "nvim" ]]; then
+    nvim_bin="/opt/homebrew/bin/nvim"
+    [[ -x "$nvim_bin" ]] || nvim_bin=$(command -v nvim)
+    tui_pid=$(ps -A -o pid=,ppid=,comm= | awk -v p="$pane_pid" '$2 == p && $3 ~ /nvim$/ {print $1; exit}')
+    embed_pid=$(ps -A -o pid=,ppid=,comm= | awk -v p="$tui_pid" '$2 == p && $3 ~ /nvim$/ {print $1; exit}')
+    tmpdir=$(getconf DARWIN_USER_TEMP_DIR 2>/dev/null || echo "${TMPDIR:-/tmp}/")
+    sock=""
+    for nvim_pid in $embed_pid $tui_pid; do
+        sock=$(find "${tmpdir}nvim.${USER:-$(whoami)}" -name "nvim.${nvim_pid}.0" 2>/dev/null | head -1)
+        [[ -n "$sock" ]] && break
+    done
+    current_file=""
+    if [[ -n "$sock" ]]; then
+        current_file=$("$nvim_bin" --server "$sock" --remote-expr 'expand("%:p")' 2>/dev/null)
+    fi
+    if [[ -n "$current_file" && -e "$current_file" ]]; then
+        tmux split-window $direction -c "#{pane_current_path}" "$(printf '%q %q' "$nvim_bin" "$current_file")"
+    else
+        tmux split-window $direction -c "#{pane_current_path}" "$nvim_bin"
+    fi
+    exit 0
+fi
+
 # Check if the pane is running Claude Code. The claude launcher is a symlink to a
 # versioned binary, so tmux reports the command as the version string (e.g. "2.1.170").
 # Forked panes run claude under an `sh -c` wrapper with no job control, so tmux
@@ -47,7 +74,7 @@ else
             is_claude_pane=true
             break
         fi
-    done < <(ps -o ppid=,comm= | awk -v p="$pane_pid" '$1 == p {print $2}')
+    done < <(ps -A -o ppid=,comm= | awk -v p="$pane_pid" '$1 == p {print $2}')
 fi
 
 if [[ "$is_claude_pane" == true ]]; then
