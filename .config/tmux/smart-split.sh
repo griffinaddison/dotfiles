@@ -37,7 +37,11 @@ done
 # nvim >= 0.10 splits into a TUI client + `nvim --embed` server; the RPC socket is
 # named after the embed pid (older single-process nvims use the TUI pid). ps needs
 # -A because the embed server has no controlling terminal.
-if [[ "$pane_cmd" == "nvim" ]]; then
+# Panes spawned with a "; exec $SHELL" wrapper report the wrapper shell as
+# pane_current_command, so also look for a foreground nvim child ("+" in stat
+# means foreground — this skips ctrl-z'd nvims in regular shell panes).
+nvim_fg_child=$(ps -A -o ppid=,stat=,comm= | awk -v p="$pane_pid" '$1 == p && $2 ~ /\+/ && $3 ~ /nvim$/ {print $3; exit}')
+if [[ "$pane_cmd" == "nvim" || -n "$nvim_fg_child" ]]; then
     nvim_bin="/opt/homebrew/bin/nvim"
     [[ -x "$nvim_bin" ]] || nvim_bin=$(command -v nvim)
     tui_pid=$(ps -A -o pid=,ppid=,comm= | awk -v p="$pane_pid" '$2 == p && $3 ~ /nvim$/ {print $1; exit}')
@@ -50,12 +54,26 @@ if [[ "$pane_cmd" == "nvim" ]]; then
     done
     current_file=""
     if [[ -n "$sock" ]]; then
-        current_file=$("$nvim_bin" --server "$sock" --remote-expr 'expand("%:p")' 2>/dev/null)
+        nvim_state=$("$nvim_bin" --server "$sock" --remote-expr 'expand("%:p") . "\n" . line(".") . "\n" . col(".") . "\n" . line("w0")' 2>/dev/null)
+        current_file=$(sed -n 1p <<< "$nvim_state")
+        cursor_line=$(sed -n 2p <<< "$nvim_state")
+        cursor_col=$(sed -n 3p <<< "$nvim_state")
+        top_line=$(sed -n 4p <<< "$nvim_state")
     fi
     if [[ -n "$current_file" && -e "$current_file" ]]; then
-        tmux split-window $direction -c "#{pane_current_path}" "$(printf '%q %q' "$nvim_bin" "$current_file")"
+        if [[ "$cursor_line" =~ ^[0-9]+$ && "$cursor_col" =~ ^[0-9]+$ ]]; then
+            # Scroll to the source pane's top visible line (zt), then place the
+            # cursor. zt is wrapped in execute because :normal! would eat the bars.
+            [[ "$top_line" =~ ^[0-9]+$ ]] || top_line=$cursor_line
+            startup_cmd="call cursor($top_line,1)|execute \"normal! zt\"|call cursor($cursor_line,$cursor_col)"
+            new_pane_cmd=$(printf '%q %q %q' "$nvim_bin" "+$startup_cmd" "$current_file")
+        else
+            new_pane_cmd=$(printf '%q %q' "$nvim_bin" "$current_file")
+        fi
+        # Drop to a shell when nvim exits instead of killing the pane
+        tmux split-window $direction -c "#{pane_current_path}" "$new_pane_cmd; exec \$SHELL"
     else
-        tmux split-window $direction -c "#{pane_current_path}" "$nvim_bin"
+        tmux split-window $direction -c "#{pane_current_path}" "$nvim_bin; exec \$SHELL"
     fi
     exit 0
 fi
