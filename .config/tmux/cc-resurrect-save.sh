@@ -88,9 +88,14 @@ if [ ${#replacements[@]} -gt 0 ]; then
     mv "$tmp_file" "$state_file"
 fi
 
-# Clean up stale breadcrumbs (older than 24 hours)
+# Clean up stale breadcrumbs (older than 24 hours), but never for panes that are
+# still alive — smart-split.sh reads them to fork the pane's claude conversation
 if [ -d "$breadcrumb_dir" ]; then
-    find "$breadcrumb_dir" -maxdepth 1 -name 'pane-*' -mmin +1440 -delete 2>/dev/null
+    live_panes=$(tmux list-panes -a -F '#{pane_id}' 2>/dev/null | tr -d '%')
+    find "$breadcrumb_dir" -maxdepth 1 -name 'pane-*' -mmin +1440 2>/dev/null | while read -r breadcrumb_file; do
+        pane_number="${breadcrumb_file##*pane-}"
+        echo "$live_panes" | grep -qx "$pane_number" || rm -f "$breadcrumb_file"
+    done
 fi
 
 exit 0

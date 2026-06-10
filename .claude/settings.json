@@ -53,7 +53,7 @@
       "Bash(curl -s * | sh:*)",
       "Bash(curl -s * | bash:*)"
     ],
-    "defaultMode": "plan",
+    "defaultMode": "auto",
     "additionalDirectories": [
       "/opt/ros",
       "/usr/include",
@@ -63,6 +63,17 @@
   },
   "hooks": {
     "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/cc-tmux-init.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
       {
         "matcher": "",
         "hooks": [
@@ -95,6 +106,9 @@
     "slack@claude-plugins-official": true,
     "clangd-lsp@claude-plugins-official": true
   },
+  "effortLevel": "medium",
   "skipDangerousModePermissionPrompt": true,
-  "effortLevel": "medium"
+  "editorMode": "vim",
+  "skipAutoPermissionPrompt": true,
+  "model": "claude-fable-5[1m]"
 }

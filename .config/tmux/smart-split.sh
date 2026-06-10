@@ -33,5 +33,43 @@ for child_pid in $child_pids; do
     fi
 done
 
+# Check if the pane is running Claude Code. The claude launcher is a symlink to a
+# versioned binary, so tmux reports the command as the version string (e.g. "2.1.170").
+# Forked panes run claude under an `sh -c` wrapper with no job control, so tmux
+# reports "sh"/"bash" instead — for those, look for a claude child of the pane shell.
+is_claude_pane=false
+if [[ "$pane_cmd" == "claude" || "$pane_cmd" =~ ^[0-9]+(\.[0-9]+)+$ ]]; then
+    is_claude_pane=true
+else
+    while read -r child_comm; do
+        child_base="${child_comm##*/}"
+        if [[ "$child_base" == "claude" || "$child_base" =~ ^[0-9]+(\.[0-9]+)+$ ]]; then
+            is_claude_pane=true
+            break
+        fi
+    done < <(ps -o ppid=,comm= | awk -v p="$pane_pid" '$1 == p {print $2}')
+fi
+
+if [[ "$is_claude_pane" == true ]]; then
+    # The cc-tmux-init.sh SessionStart hook records each pane's session id in
+    # ~/.cache/claude-tmux/pane-<N>. Use it to fork the exact conversation in this
+    # pane; fall back to the most recent session in the directory if no breadcrumb.
+    pane_id=$(tmux display-message -p '#{pane_id}')
+    breadcrumb="$HOME/.cache/claude-tmux/${pane_id//%/pane-}"
+    session_id=""
+    if [[ -r "$breadcrumb" ]]; then
+        session_id=$(<"$breadcrumb")
+        [[ "$session_id" =~ ^[a-zA-Z0-9-]+$ ]] || session_id=""
+    fi
+    if [[ -n "$session_id" ]]; then
+        fork_cmd="$HOME/.local/bin/claude --resume $session_id --fork-session"
+    else
+        fork_cmd="$HOME/.local/bin/claude --continue --fork-session"
+    fi
+    # Fork the conversation from the source pane; drop to a shell when claude exits
+    tmux split-window $direction -c "#{pane_current_path}" "sh -c '$fork_cmd; exec \$SHELL'"
+    exit 0
+fi
+
 # Default: split with current path
 tmux split-window $direction -c "#{pane_current_path}"
