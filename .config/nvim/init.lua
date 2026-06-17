@@ -39,6 +39,12 @@ vim.opt.relativenumber = true
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
 
+-- Inherit colors from the terminal/tmux instead of using a truecolor theme.
+-- With termguicolors OFF, nvim uses cterm (ANSI palette indices 0-15), which
+-- are exactly the 16 colors your terminal emulator defines. Set it true again
+-- (and re-enable a theme like bamboo below) to go back to a self-contained scheme.
+vim.opt.termguicolors = false
+
 -- -- Enable autoindent (match prev line indent) and smartindent (auto indent after : and stuff)
 -- vim.opt.autoindent = true
 -- vim.opt.smartindent = true
@@ -805,8 +811,10 @@ require("lazy").setup({
           toggle_style_key = '<leader>ts',
           toggle_style_list = { 'multiplex', 'light' }, -- List of styles to toggle between
         }
-        require('bamboo').load()
-        vim.api.nvim_set_hl(0, "LineNr", { fg = "#707070" }) -- or "#aaaaaa", etc.
+        -- Disabled: let nvim inherit the terminal/tmux palette (see termguicolors above).
+        -- Uncomment these two lines to go back to the bamboo theme.
+        -- require('bamboo').load()
+        -- vim.api.nvim_set_hl(0, "LineNr", { fg = "#707070" }) -- or "#aaaaaa", etc.
       end,
     },
 
@@ -1108,7 +1116,9 @@ require("lazy").setup({
         require('lualine').setup {
           options = {
             icons_enabled = true,
-            theme = 'auto',
+            -- '16color' uses the terminal's ANSI palette (matches termguicolors = false).
+            -- 'auto' would fall back to nvim's reverse-video StatusLine and render as a white bar.
+            theme = '16color',
             -- component_separators = { left = '', right = '' },
             -- section_separators = { left = '', right = '' },
             disabled_filetypes = {
