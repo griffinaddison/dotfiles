@@ -1,6 +1,7 @@
 auto-update-channel=tip
 
 theme = Chalk
+theme = Gruvbox Dark Hard
 
 
 cursor-style = block
@@ -8,6 +9,7 @@ cursor-style-blink = false
 
 # custom-shader = shaders/cursor_smear.glsl
 # custom-shader = shaders/cursor_beacon.glsl
+# custom-shader-animation = false
 
 
 
