@@ -105,6 +105,9 @@ export CLAUDE_CODE_NO_FLICKER=1
 export PATH=/Users/griffinaddison/.opencode/bin:$PATH
 export STM32_PRG_PATH=/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/MacOs/bin
 
+# === ROS2 ===
+export RCUTILS_COLORIZED_OUTPUT=1
+
 # Load custom aliases
 [ -f ~/.aliases ] && source ~/.aliases
 
