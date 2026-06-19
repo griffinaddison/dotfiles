@@ -19,25 +19,6 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
-# === Navigation aliases ===
-alias up="cd .."
-alias upp="cd ../.."
-alias uppp="cd ../../.."
-alias upppp="cd ../../../.."
-alias uppppp="cd ../../../../.."
-
-# === Git aliases ===
-alias gs="git status"
-alias gps="git push"
-alias gd="git diff"
-alias gc="git commit -m"
-alias ga="git add"
-alias gg="git log --graph --oneline --all --pretty"
-alias gl="git log"
-alias gpl="git pull"
-alias gf="git fetch"
-alias gck="git checkout"
-
 # === Go paths ===
 [ -d ~/go ] && export GOPATH=$HOME/go
 [ "$GOPATH" ] && [ -d "$GOPATH/bin" ] && PATH="$PATH:$GOPATH/bin"
@@ -108,8 +89,97 @@ export STM32_PRG_PATH=/Applications/STMicroelectronics/STM32Cube/STM32CubeProgra
 # === ROS2 ===
 export RCUTILS_COLORIZED_OUTPUT=1
 
-# Load custom aliases
-[ -f ~/.aliases ] && source ~/.aliases
+# Kill the ROS 2 daemon, every ROS/DDS process, and stale DDS shared memory.
+# Use it when nodes hang, discovery goes stale, or `ros2` commands act haunted.
+ros2_nuke() {
+    echo "ros2_nuke: stopping daemon"
+    ros2 daemon stop 2>/dev/null
+    echo "ros2_nuke: killing ROS/DDS processes"
+    pkill -9 -f '(_ros2_daemon|ros2cli|rmw_|fastdds|fast_discovery|discovery_server|rviz2|robot_state_publisher|component_container|controller_manager|mujoco_ros2|ros_gz|gzserver|gzclient)' 2>/dev/null
+    echo "ros2_nuke: clearing DDS shared memory"
+    rm -rf /dev/shm/fastrtps_* /dev/shm/sem.fastrtps_* /dev/shm/fast_datasharing_* /dev/shm/*fastdds* /dev/shm/sem.*fastdds* 2>/dev/null
+    ros2 daemon start 2>/dev/null
+    echo "ros2_nuke: done"
+}
+alias ros_nuke='ros2_nuke'
+
+# === Aliases & functions (merged in from ~/.aliases) ===
+# Directory navigation
+alias up='cd ..'
+alias upp='cd ../..'
+alias uppp='cd ../../..'
+alias upppp='cd ../../../..'
+alias uppppp='cd ../../../../..'
+alias upppppp='cd ../../../../../..'
+alias uppppppp='cd ../../../../../../..'
+
+# Set tmux pane title to hostname
+if [ -n "$TMUX" ]; then
+    PROMPT_COMMAND='echo -ne "\e]2;$(hostname -s)\e\\"'
+fi
+
+# Wrap ssh to update tmux pane title with remote hostname
+ssh() {
+    local host="${@: -1}"
+    host="${host##*@}"
+    printf '\e]2;SSH: %s\e\\' "$host"
+    if [ -n "$TMUX" ]; then
+        tmux set pane-active-border-style fg=colour226
+        tmux set -p pane-border-style fg=colour58
+    fi
+    command ssh "$@"
+    printf '\e]2;%s\e\\' "$(hostname -s)"
+    if [ -n "$TMUX" ]; then
+        tmux set pane-active-border-style fg=colour70
+        tmux set -p pane-border-style fg=colour22
+    fi
+}
+
+# Dotfiles
+dotpull() {
+    cd ~/.dotfiles \
+        && git fetch --all \
+        && git reset --hard origin/main \
+        ; stow --adopt . \
+        && git checkout -- . \
+        ; _dotpull_link_kanata \
+        ; tmux source-file ~/.config/tmux/tmux.conf 2>/dev/null \
+        ; ~/.config/tmux/plugins/tpm/bin/install_plugins 2>/dev/null
+    cd -
+}
+
+# Symlink OS-specific kanata config (mac has `fn`, linux does not)
+_dotpull_link_kanata() {
+    local variant
+    if [[ "$OSTYPE" == darwin* ]]; then
+        variant="mac"
+    else
+        variant="linux"
+    fi
+    local src="$HOME/.dotfiles/.config/kanata/$variant/kanata.kbd"
+    local dst="$HOME/.config/kanata/kanata.kbd"
+    [ -f "$src" ] || return 0
+    mkdir -p "$(dirname "$dst")"
+    ln -sfn "$src" "$dst"
+}
+
+# Git
+alias gs='git status'
+alias gc='git commit -m'
+alias gd='git diff'
+alias gl='git log'
+alias gpl='git pull'
+alias gf='git fetch'
+alias gps='git push'
+alias ga='git add'
+alias gck='git checkout'
+alias gg='git log --graph --oneline --decorate'
+
+# Slurm
+alias sq='squeue -p a3mega -o "%.10i %.15u %.8T %.10M %.5D %.5C %.20N" --sort=S'
+
+# Claude Code
+alias claude-discord-danger='claude --dangerously-skip-permissions --channels plugin:discord@claude-plugins-official'
 
 
 
