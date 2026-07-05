@@ -189,11 +189,37 @@ vim.api.nvim_create_autocmd("BufWritePost", {
   group = "JrnlSync",
   pattern = vim.fn.expand("~") .. "/jrnl/*",
   callback = function()
-    vim.fn.system('git-auto-sync sync')
-    -- Show a confirmation message
-    -- vim.api.nvim_echo({ { "synced using git-auto-sync" } }, false, {})
-    -- vim.print({ { "synced using git-auto-sync" } }, false, {})
-    -- vim.notify("Synced using git-auto-sync", vim.log.levels.INFO)
+    -- async so :w returns instantly; the git pull/commit/push runs in the background.
+    -- notify when it starts, finishes, or errors.
+    -- scheduled so it doesn't stack with nvim's own "written" message and trigger the hit-enter prompt
+    vim.schedule(function()
+      vim.notify("jrnl: syncing…", vim.log.levels.INFO, { title = "git-auto-sync" })
+    end)
+    local output = {}
+    local function collect(_, data)
+      for _, line in ipairs(data or {}) do
+        if line ~= "" then table.insert(output, line) end
+      end
+    end
+    vim.fn.jobstart({ 'git-auto-sync', 'sync' }, {
+      stdout_buffered = true,
+      stderr_buffered = true,
+      on_stdout = collect,
+      on_stderr = collect,
+      on_exit = function(_, code)
+        vim.schedule(function()
+          if code == 0 then
+            vim.notify("jrnl: synced ✓", vim.log.levels.INFO, { title = "git-auto-sync" })
+          else
+            vim.notify(
+              "jrnl: sync FAILED (exit " .. code .. ")\n" .. table.concat(output, "\n"),
+              vim.log.levels.ERROR,
+              { title = "git-auto-sync" }
+            )
+          end
+        end)
+      end,
+    })
   end,
 })
 
