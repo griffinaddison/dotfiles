@@ -58,6 +58,13 @@ if [[ -f "$KANATA_SRC" ]]; then
     echo "Kanata config linked: $KANATA_DST -> $KANATA_SRC"
 fi
 
+# Clone tmux plugin manager (tpm can't bootstrap itself)
+TPM_DIR="$HOME/.config/tmux/plugins/tpm"
+if [[ ! -d "$TPM_DIR" ]]; then
+    git clone --depth 1 https://github.com/tmux-plugins/tpm "$TPM_DIR"
+    echo "tpm cloned"
+fi
+
 # Set Claude Code to vim mode
 CLAUDE_JSON="$HOME/.claude.json"
 if [[ -f "$CLAUDE_JSON" ]]; then

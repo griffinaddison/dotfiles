@@ -143,6 +143,8 @@ dotpull() {
         ; stow --adopt . \
         && git checkout -- . \
         ; _dotpull_link_kanata \
+        ; [ -d ~/.config/tmux/plugins/tpm ] \
+            || git clone --depth 1 https://github.com/tmux-plugins/tpm ~/.config/tmux/plugins/tpm \
         ; tmux source-file ~/.config/tmux/tmux.conf 2>/dev/null \
         ; ~/.config/tmux/plugins/tpm/bin/install_plugins 2>/dev/null
     cd -
