@@ -1,2 +1,18 @@
-# Machine-specific symlink created by _dotpull_link_kanata
+# ~/.config is a symlink to .dotfiles/.config, so every tool that writes to
+# ~/.config is writing into this repo. gh, for one, drops config.yml and
+# hosts.yml there the first time you use it.
+#
+# So ignore .config by default and list what we actually keep. Add a line when
+# you start tracking a new tool.
+.config/*
+!.config/claude/
+!.config/ghostty/
+!.config/kanata/
+!.config/kitty/
+!.config/nvim/
+!.config/skhd/
+!.config/tmux/
+
+# Machine-specific symlink created by _dotpull_link_kanata.
+# Must stay below the allow list above: last matching pattern wins.
 .config/kanata/kanata.kbd

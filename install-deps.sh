@@ -119,7 +119,8 @@ if [[ "$PKG" == "apt-get" ]]; then
     rm -rf /tmp/tmux-${TMUX_VERSION} /tmp/tmux-${TMUX_VERSION}.tar.gz
 fi
 
-# tmux plugin manager - included as submodule in .config/tmux/plugins/tpm
+# tmux plugin manager - install-config.sh clones it, and .config/tmux/.gitignore
+# keeps it out of this repo. It is not a submodule; .gitmodules is empty.
 
 # ghostty
 if $INSTALL_GHOSTTY; then
