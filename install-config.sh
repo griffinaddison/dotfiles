@@ -9,6 +9,11 @@ if [[ ! -d "$DOTFILES_DIR" ]]; then
 fi
 
 cd "$DOTFILES_DIR"
+
+# stow, jq and friends come from brew on macOS, which isn't on PATH by default
+source "$DOTFILES_DIR/lib.sh"
+load_brew || true
+
 git submodule update --init --recursive
 stow --adopt .
 git checkout -- .

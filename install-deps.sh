@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib.sh"
+
 # Optional components
 INSTALL_GHOSTTY=false
 INSTALL_KANATA=false
@@ -22,7 +25,32 @@ else
 fi
 
 # Detect package manager
-if command -v apt-get &> /dev/null; then
+if [[ "$(uname)" == "Darwin" ]]; then
+    PKG="brew"
+
+    command -v brew &> /dev/null || load_brew || true
+
+    # macOS ships no package manager, so install one
+    if ! command -v brew &> /dev/null; then
+        # brew needs the Xcode Command Line Tools (git, clang)
+        if ! xcode-select -p &> /dev/null; then
+            echo "Installing Xcode Command Line Tools..."
+            xcode-select --install
+            echo "Finish that install in the GUI, then re-run this script."
+            exit 1
+        fi
+
+        echo "Installing Homebrew..."
+        NONINTERACTIVE="$DOTFILES_YES" /bin/bash -c \
+            "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        load_brew
+    fi
+
+    brew install \
+        lua neovim tmux ripgrep stow jq \
+        cmake node imagemagick luarocks
+
+elif command -v apt-get &> /dev/null; then
     PKG="apt-get"
     SUDO=""
     [[ $EUID -ne 0 ]] && SUDO="sudo"
@@ -61,10 +89,6 @@ if command -v apt-get &> /dev/null; then
         rm -rf ripgrep-14.1.0-aarch64-unknown-linux-gnu ripgrep-14.1.0-aarch64-unknown-linux-gnu.tar.gz
     fi
 
-elif command -v brew &> /dev/null; then
-    brew install \
-        lua neovim tmux ripgrep stow jq \
-        cmake node imagemagick luarocks
 else
     echo "Unsupported package manager"
     exit 1
@@ -157,7 +181,6 @@ if $INSTALL_KANATA && command -v apt-get &> /dev/null; then
     $SUDO cp "$HOME/.cargo/bin/kanata" /usr/local/bin/
 
     # Copy Linux-specific config
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     $SUDO mkdir -p /etc/kanata
     $SUDO cp "$SCRIPT_DIR/.config/kanata/linux/kanata.kbd" /etc/kanata/
 
