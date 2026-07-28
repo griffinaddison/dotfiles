@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Runs the Karabiner VirtualHIDDevice daemon at boot.
+
+  kanata needs this daemon to talk to the virtual keyboard driver. Karabiner
+  Elements would run it for us, but we only install the standalone DriverKit
+  package, and that does not start the daemon on its own.
+
+  install-deps.sh installs this. To reload it by hand:
+    sudo launchctl bootout system/org.pqrs.Karabiner-VirtualHIDDevice-Daemon
+    sudo launchctl bootstrap system /Library/LaunchDaemons/org.pqrs.Karabiner-VirtualHIDDevice-Daemon.plist
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>org.pqrs.Karabiner-VirtualHIDDevice-Daemon</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Library/Application Support/org.pqrs/Karabiner-DriverKit-VirtualHIDDevice/Applications/Karabiner-VirtualHIDDevice-Daemon.app/Contents/MacOS/Karabiner-VirtualHIDDevice-Daemon</string>
+    </array>
+
+    <key>UserName</key>
+    <string>root</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/var/log/karabiner-vhid-daemon.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/var/log/karabiner-vhid-daemon.log</string>
+</dict>
+</plist>

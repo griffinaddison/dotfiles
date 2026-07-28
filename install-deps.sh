@@ -166,8 +166,89 @@ fi
 echo "Ghostty nightly installed!"
 fi # INSTALL_GHOSTTY
 
-# kanata (Linux only)
-if $INSTALL_KANATA && command -v apt-get &> /dev/null; then
+# kanata
+if $INSTALL_KANATA && [[ "$(uname)" == "Darwin" ]]; then
+    echo "Installing Kanata..."
+
+    brew install kanata
+
+    # kanata drives a virtual keyboard provided by Karabiner's DriverKit
+    # extension. The two speak a versioned protocol, so kanata's docs name one
+    # exact driver release. Don't bump this without checking
+    # https://github.com/jtroo/kanata/blob/main/docs/setup-macos.md
+    VHID_VERSION="8.0.0"
+    VHID_MANAGER="/Applications/.Karabiner-VirtualHIDDevice-Manager.app/Contents/MacOS/Karabiner-VirtualHIDDevice-Manager"
+
+    if [[ ! -x "$VHID_MANAGER" ]]; then
+        echo "Installing Karabiner-DriverKit-VirtualHIDDevice ${VHID_VERSION}..."
+        curl -fsSL -o /tmp/karabiner-vhid.pkg \
+            "https://github.com/pqrs-org/Karabiner-DriverKit-VirtualHIDDevice/releases/download/v${VHID_VERSION}/Karabiner-DriverKit-VirtualHIDDevice-${VHID_VERSION}.pkg"
+        sudo installer -pkg /tmp/karabiner-vhid.pkg -target /
+        rm /tmp/karabiner-vhid.pkg
+    fi
+
+    # Registers the driver extension with macOS. You still have to approve it
+    # by hand in System Settings; this just makes it show up there.
+    sudo "$VHID_MANAGER" forceActivate
+
+    # Run the driver's daemon at boot. Karabiner Elements would do this, but we
+    # only installed the standalone driver.
+    VHID_PLIST="/Library/LaunchDaemons/org.pqrs.Karabiner-VirtualHIDDevice-Daemon.plist"
+    sudo cp "$SCRIPT_DIR/.config/kanata/mac/karabiner-vhid-daemon.plist" "$VHID_PLIST"
+    sudo chown root:wheel "$VHID_PLIST"
+    sudo launchctl bootout "system/org.pqrs.Karabiner-VirtualHIDDevice-Daemon" 2>/dev/null || true
+    sudo launchctl bootstrap system "$VHID_PLIST"
+
+    # sudo resets PATH, so hand it absolute paths
+    BREW_BIN="$(command -v brew)"
+    KANATA_BIN="$(command -v kanata)"
+
+    # Pops the Input Monitoring and Accessibility dialogs. Older kanata builds
+    # lack the flag, so don't let it kill the script.
+    sudo "$KANATA_BIN" --macos-request-permissions 2>/dev/null || true
+
+    # brew's formula already runs kanata as root against
+    # ~/.config/kanata/kanata.kbd, which is where install-config.sh links the
+    # mac config. So there's nothing to configure here.
+    #
+    # Only start it if the driver extension is approved and the config exists.
+    # Starting it early just crash-loops until you finish the GUI steps.
+    if systemextensionsctl list 2>/dev/null \
+        | grep -q "org.pqrs.Karabiner-DriverKit-VirtualHIDDevice.*\[activated enabled\]" \
+        && [[ -e "$HOME/.config/kanata/kanata.kbd" ]]; then
+        sudo "$BREW_BIN" services restart kanata
+        echo "Kanata installed and started!"
+    else
+        cat <<'KANATA_TODO'
+
+Kanata is installed but not running yet. Two things need a human:
+
+  1. Approve the driver extension.
+     System Settings > General > Login Items & Extensions > Driver Extensions
+     Turn on: org.pqrs.Karabiner-DriverKit-VirtualHIDDevice
+     Jump there: open "x-apple.systempreferences:com.apple.ExtensionsPreferences"
+
+  2. Grant kanata Input Monitoring and Accessibility.
+     System Settings > Privacy & Security > Input Monitoring
+     System Settings > Privacy & Security > Accessibility
+     Add or enable the kanata binary in both.
+     Jump there:
+       open "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
+       open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+
+Then start it:
+
+  sudo brew services start kanata
+
+Check that it worked:
+
+  sudo launchctl list | grep -E 'kanata|org.pqrs'
+  tail -f "$(brew --prefix)/var/log/kanata.log"
+
+KANATA_TODO
+    fi
+
+elif $INSTALL_KANATA && command -v apt-get &> /dev/null; then
     echo "Installing Kanata..."
 
     # Install Rust if needed
