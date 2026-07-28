@@ -173,14 +173,46 @@ if $INSTALL_KANATA && [[ "$(uname)" == "Darwin" ]]; then
     brew install kanata
 
     # kanata drives a virtual keyboard provided by Karabiner's DriverKit
-    # extension. The two speak a versioned protocol, so kanata's docs name one
-    # exact driver release. Don't bump this without checking
-    # https://github.com/jtroo/kanata/blob/main/docs/setup-macos.md
-    VHID_VERSION="8.0.0"
-    VHID_MANAGER="/Applications/.Karabiner-VirtualHIDDevice-Manager.app/Contents/MacOS/Karabiner-VirtualHIDDevice-Manager"
+    # extension. They speak a versioned protocol and pqrs changes it between
+    # minor releases, so each kanata release supports exactly one driver
+    # version. Get this wrong and kanata looks for a socket name the driver
+    # never creates, then logs "connect_failed asio.system:2" forever.
+    #
+    # Read the pin off the docs for the kanata version you actually have, NOT
+    # off main:
+    #   https://github.com/jtroo/kanata/blob/v1.12.0/docs/setup-macos.md
+    # kanata 1.12.0 wants 6.2.0. main wants 8.0.0. They are not interchangeable.
+    KANATA_PINNED_FOR="1.12.0"
+    VHID_VERSION="6.2.0"
 
-    if [[ ! -x "$VHID_MANAGER" ]]; then
-        echo "Installing Karabiner-DriverKit-VirtualHIDDevice ${VHID_VERSION}..."
+    VHID_APP="/Applications/.Karabiner-VirtualHIDDevice-Manager.app"
+    VHID_MANAGER="$VHID_APP/Contents/MacOS/Karabiner-VirtualHIDDevice-Manager"
+
+    KANATA_HAVE="$(kanata --version 2>/dev/null | awk '{print $2}')"
+    if [[ "$KANATA_HAVE" != "$KANATA_PINNED_FOR" ]]; then
+        echo
+        echo "WARNING: driver $VHID_VERSION was verified against kanata $KANATA_PINNED_FOR,"
+        echo "         but brew installed kanata ${KANATA_HAVE:-unknown}."
+        echo "         Check that release's docs/setup-macos.md for its driver version"
+        echo "         and update VHID_VERSION and KANATA_PINNED_FOR together."
+        echo
+    fi
+
+    # Compare against what's installed, so a wrong version gets corrected
+    # instead of skipped
+    VHID_HAVE=""
+    if [[ -f "$VHID_APP/Contents/Info.plist" ]]; then
+        VHID_HAVE="$(defaults read "$VHID_APP/Contents/Info.plist" CFBundleVersion 2>/dev/null || true)"
+    fi
+
+    if [[ "$VHID_HAVE" != "$VHID_VERSION" ]]; then
+        echo "Installing Karabiner-DriverKit-VirtualHIDDevice ${VHID_VERSION} (have: ${VHID_HAVE:-none})..."
+
+        # Retire the old extension first or macOS keeps the old one loaded
+        if [[ -x "$VHID_MANAGER" ]]; then
+            sudo "$VHID_MANAGER" deactivate 2>/dev/null || true
+        fi
+
         curl -fsSL -o /tmp/karabiner-vhid.pkg \
             "https://github.com/pqrs-org/Karabiner-DriverKit-VirtualHIDDevice/releases/download/v${VHID_VERSION}/Karabiner-DriverKit-VirtualHIDDevice-${VHID_VERSION}.pkg"
         sudo installer -pkg /tmp/karabiner-vhid.pkg -target /
@@ -228,10 +260,12 @@ Kanata is installed but not running yet. Two things need a human:
      Turn on: org.pqrs.Karabiner-DriverKit-VirtualHIDDevice
      Jump there: open "x-apple.systempreferences:com.apple.ExtensionsPreferences"
 
-  2. Grant kanata Input Monitoring and Accessibility.
+  2. Grant kanata Input Monitoring and Accessibility. It needs BOTH, and it
+     only complains about one at a time, so expect two rounds.
      System Settings > Privacy & Security > Input Monitoring
      System Settings > Privacy & Security > Accessibility
-     Add or enable the kanata binary in both.
+     kanata usually isn't listed. Click +, press cmd-shift-g, and enter:
+       /opt/homebrew/bin/kanata
      Jump there:
        open "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
        open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
@@ -244,6 +278,15 @@ Check that it worked:
 
   sudo launchctl list | grep -E 'kanata|org.pqrs'
   tail -f "$(brew --prefix)/var/log/kanata.log"
+
+Two ways this breaks later:
+
+  "connect_failed asio.system:2" repeating forever means the driver version
+  doesn't match kanata's. See VHID_VERSION in install-deps.sh.
+
+  After "brew upgrade kanata" the permissions go stale, because macOS pins the
+  resolved path (.../Cellar/kanata/<version>/bin/kanata) and the version is in
+  it. Remove kanata from both Privacy panes and re-add it.
 
 KANATA_TODO
     fi
