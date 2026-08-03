@@ -70,10 +70,15 @@ function zle-keymap-select zle-line-init {
 }
 zle -N zle-keymap-select
 zle -N zle-line-init
-# Reset to beam cursor when starting a new prompt
+# Reset to beam cursor when starting a new prompt.
+# Over ssh, include the cwd in the pane title so smart-split.sh can cd there.
 precmd() {
     echo -ne '\e[6 q'
-    echo -ne "\e]2;$(hostname -s)\e\\"
+    if [[ -n $SSH_CONNECTION ]]; then
+        echo -ne "\e]2;$(hostname -s):$PWD\e\\"
+    else
+        echo -ne "\e]2;$(hostname -s)\e\\"
+    fi
 }
 
 # === Prompt: user@host:path$ (bash-style with colors) ===

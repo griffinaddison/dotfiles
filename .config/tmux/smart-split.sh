@@ -9,6 +9,23 @@ direction="$1"
 pane_cmd=$(tmux display-message -p '#{pane_current_command}')
 pane_pid=$(tmux display-message -p '#{pane_pid}')
 
+# Re-run an ssh command, cd'ing to the remote cwd if the remote shell reported
+# it via the pane title (OSC 2 — see the precmd hook in the robots' zshrc).
+# Falls back to plain re-ssh (lands in $HOME) if the title isn't a path.
+split_ssh() {
+    local ssh_cmd="$1"
+    local remote_dir
+    remote_dir=$(tmux display-message -p '#{pane_title}')
+    # Title looks like "jao1:/home/tk/tkr/2" — keep everything after the first colon
+    remote_dir="${remote_dir#*:}"
+    if [[ "$ssh_cmd" == ssh* && "$remote_dir" == /* ]]; then
+        tmux split-window $direction "sh -c '$ssh_cmd -t \"cd \\\"$remote_dir\\\" 2>/dev/null; exec \\\$SHELL -l\"; exec \$SHELL'"
+    else
+        # Wrap in shell so exiting SSH doesn't close the pane
+        tmux split-window $direction "sh -c '$ssh_cmd; exec \$SHELL'"
+    fi
+}
+
 # Check if we're in an SSH or mosh session
 if [[ "$pane_cmd" == "ssh" || "$pane_cmd" == "mosh" || "$pane_cmd" == "mosh-client" ]]; then
     # Get the full command from the process
@@ -16,8 +33,7 @@ if [[ "$pane_cmd" == "ssh" || "$pane_cmd" == "mosh" || "$pane_cmd" == "mosh-clie
     ssh_cmd=$(ps -o args= -p "$pane_pid" 2>/dev/null)
 
     if [[ -n "$ssh_cmd" && ("$ssh_cmd" == ssh* || "$ssh_cmd" == mosh*) ]]; then
-        # Wrap in shell so exiting SSH doesn't close the pane
-        tmux split-window $direction "sh -c '$ssh_cmd; exec \$SHELL'"
+        split_ssh "$ssh_cmd"
         exit 0
     fi
 fi
@@ -27,8 +43,7 @@ child_pids=$(pgrep -P "$pane_pid" 2>/dev/null)
 for child_pid in $child_pids; do
     child_cmd=$(ps -o args= -p "$child_pid" 2>/dev/null)
     if [[ "$child_cmd" == ssh* || "$child_cmd" == mosh* ]]; then
-        # Wrap in shell so exiting SSH doesn't close the pane
-        tmux split-window $direction "sh -c '$child_cmd; exec \$SHELL'"
+        split_ssh "$child_cmd"
         exit 0
     fi
 done
