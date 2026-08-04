@@ -1,0 +1,116 @@
+#!/bin/zsh
+# git-sync <repo> — commit everything, pull --rebase, push. Idempotent.
+#
+# Replaces git-auto-sync (GitJournal) for the one thing we used it for: syncing
+# a markdown repo on save. That tool also shells out to git, so nothing about
+# git behavior changes; we just drop a per-machine brew/apt install.
+#
+# Not replaced: git-auto-sync's `daemon` mode (filesystem watching, 10-minute
+# polling, sync on wake). Nothing here runs in the background. Sync happens when
+# something calls this script.
+#
+# Called from nvim on BufWritePost/BufReadPre. Safe to run by hand.
+
+set -u
+
+REPO="${1:-}"
+TRIES=3
+STALE_LOCK_MIN=5
+
+if [[ -z "$REPO" ]]; then
+  print -u2 "usage: git-sync <repo>"
+  exit 2
+fi
+
+REPO="${REPO/#\~/$HOME}"
+
+if [[ ! -d "$REPO" ]]; then
+  print -u2 "git-sync: no such directory: $REPO"
+  exit 2
+fi
+
+cd "$REPO" || exit 2
+
+if ! GIT_DIR_PATH=$(git rev-parse --absolute-git-dir 2>/dev/null); then
+  print -u2 "git-sync: not a git repo: $REPO"
+  exit 2
+fi
+
+# Rebasing a detached HEAD onto an upstream that doesn't exist goes badly.
+if ! BRANCH=$(git symbolic-ref --short -q HEAD); then
+  print -u2 "git-sync: detached HEAD in $REPO, refusing to sync"
+  exit 2
+fi
+
+LOCK="$GIT_DIR_PATH/git-sync.lock"
+
+# A killed run leaves the lock behind. Anything older than STALE_LOCK_MIN is
+# not a live sync.
+if [[ -d "$LOCK" ]] && [[ -n "$(find "$LOCK" -maxdepth 0 -mmin +$STALE_LOCK_MIN 2>/dev/null)" ]]; then
+  rmdir "$LOCK" 2>/dev/null
+fi
+
+# Don't stack overlapping runs. mkdir is atomic. Bail rather than queue: the
+# next save syncs anyway.
+if ! mkdir "$LOCK" 2>/dev/null; then
+  exit 0
+fi
+trap 'rmdir "$LOCK" 2>/dev/null' EXIT INT TERM
+
+# Only pull/push when there's actually somewhere to pull from and push to. A
+# local-only repo should still get its commits made.
+has_upstream() {
+  git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' >/dev/null 2>&1
+}
+
+# Returns 0 on success, 1 if worth retrying, 3 if a human has to look.
+sync_once() {
+  if has_upstream; then
+    if ! git pull --rebase --autostash --quiet; then
+      # Never leave the repo mid-rebase. The next run would fail on the wedged
+      # state instead of on the real conflict, and it'd do it silently from a
+      # nvim job callback. Aborting also restores the autostash by itself —
+      # don't `stash pop` here or you may pop an unrelated entry.
+      git rebase --abort 2>/dev/null
+      return 3
+    fi
+  fi
+
+  # `pull --rebase --autostash` exits 0 even when re-applying the autostash
+  # conflicts. Without this check the next lines would `add -A` the conflict
+  # markers, commit them, and push them. Measured, not theoretical.
+  if [[ -n "$(git diff --name-only --diff-filter=U)" ]]; then
+    return 3
+  fi
+
+  if [[ -n "$(git status --porcelain)" ]]; then
+    git add -A || return 1
+    git commit -q -m "$(hostname -s): $(date '+%Y-%m-%d %H:%M')" || return 1
+  fi
+
+  if has_upstream; then
+    git push --quiet || return 1
+  fi
+
+  return 0
+}
+
+err=""
+for i in {1..$TRIES}; do
+  err=$(sync_once 2>&1)
+  rc=$?
+  (( rc == 0 )) && exit 0
+  if (( rc == 3 )); then
+    print -u2 "git-sync: $REPO has conflicts that need resolving by hand"
+    git -C "$REPO" diff --name-only --diff-filter=U 2>/dev/null | sed 's/^/  /' >&2
+    [[ -n "$err" ]] && print -u2 "$err"
+    exit 3
+  fi
+  # Another committer (Obsidian's Git plugin, another shell) may be holding
+  # .git/index.lock. Give it a moment.
+  (( i < TRIES )) && sleep 2
+done
+
+print -u2 "git-sync: $REPO failed after $TRIES tries"
+[[ -n "$err" ]] && print -u2 "$err"
+exit 1

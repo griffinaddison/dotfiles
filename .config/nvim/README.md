@@ -20,15 +20,9 @@ dependencies:
       # Verify npm version:
       npm -v # Should print "10.9.2".
     ```
-  - git-auto-sync (for automatic *.md file syncing)
-    * OSX - `brew install GitJournal/tap/git-auto-sync`
-    * Linux (Ubuntu)
-    
-        ```bash
-        sudo echo "deb [trusted=yes] https://apt.fury.io/vhanda/ /" | sudo tee /etc/apt/sources.list.d/git-auto-sync.list
-        sudo apt-get update
-        sudo apt-get install -y git-auto-sync
-        ```
+  - (no longer needed) git-auto-sync — replaced by `.local/bin/git-sync` in this
+    repo, which stow links to `~/.local/bin/git-sync`. Nothing to install.
+    If you still have the old binary: `brew uninstall git-auto-sync`.
   - ripgrep
     ```bash
     curl -LO https://github.com/BurntSushi/ripgrep/releases/download/14.1.0/ripgrep_14.1.0-1_amd64.deb

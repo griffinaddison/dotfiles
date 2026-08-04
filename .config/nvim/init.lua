@@ -181,69 +181,115 @@ vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
 
 
 
--- jrnl syncing
-vim.api.nvim_create_augroup("JrnlSync", { clear = true })
+-- Vault syncing (jrnl, kb).
+--
+-- Commit and push on save, pull on open. Runs ~/.local/bin/git-sync, which
+-- ships in this dotfiles repo. It replaces git-auto-sync, which had to be
+-- installed separately on every machine — and often wasn't, so the sync failed
+-- silently inside the jobstart callback.
+--
+-- `wrap` differs per vault. kb sets `*.md merge=union` in .gitattributes, so
+-- notes there are written one sentence per line. Union merges line by line, so
+-- sentence-per-line means two people editing different sentences of the same
+-- paragraph merge cleanly instead of duplicating. Those lines are long, hence
+-- wrap.
+local vaults = {
+  { path = vim.fn.expand("~") .. "/jrnl", wrap = false },
+  { path = vim.fn.expand("~") .. "/kb",   wrap = true },
+}
 
--- sync on save
-vim.api.nvim_create_autocmd("BufWritePost", {
-  group = "JrnlSync",
-  pattern = vim.fn.expand("~") .. "/jrnl/*",
-  callback = function()
-    -- async so :w returns instantly; the git pull/commit/push runs in the background.
-    -- notify when it starts, finishes, or errors.
-    -- scheduled so it doesn't stack with nvim's own "written" message and trigger the hit-enter prompt
-    vim.schedule(function()
-      vim.notify("jrnl: syncing…", vim.log.levels.INFO, { title = "git-auto-sync" })
-    end)
-    local output = {}
-    local function collect(_, data)
-      for _, line in ipairs(data or {}) do
-        if line ~= "" then table.insert(output, line) end
-      end
+local VaultSync = vim.api.nvim_create_augroup("VaultSync", { clear = true })
+
+local function sync(vault_path, name)
+  local output = {}
+  local function collect(_, data)
+    for _, line in ipairs(data or {}) do
+      if line ~= "" then table.insert(output, line) end
     end
-    vim.fn.jobstart({ 'git-auto-sync', 'sync' }, {
-      stdout_buffered = true,
-      stderr_buffered = true,
-      on_stdout = collect,
-      on_stderr = collect,
-      on_exit = function(_, code)
-        vim.schedule(function()
-          if code == 0 then
-            vim.notify("jrnl: synced ✓", vim.log.levels.INFO, { title = "git-auto-sync" })
-          else
-            vim.notify(
-              "jrnl: sync FAILED (exit " .. code .. ")\n" .. table.concat(output, "\n"),
-              vim.log.levels.ERROR,
-              { title = "git-auto-sync" }
-            )
-          end
-        end)
-      end,
-    })
-  end,
-})
+  end
+  vim.fn.jobstart({ "git-sync", vault_path }, {
+    stdout_buffered = true,
+    stderr_buffered = true,
+    on_stdout = collect,
+    on_stderr = collect,
+    on_exit = function(_, code)
+      -- Only speak up when something needs attention. A notification on every
+      -- save is noise when you're saving every few seconds.
+      if code == 0 then return end
+      vim.schedule(function()
+        local msg = code == 3
+            and (name .. ": conflicts need resolving by hand\n" .. table.concat(output, "\n"))
+            or (name .. ": sync FAILED (exit " .. code .. ")\n" .. table.concat(output, "\n"))
+        vim.notify(msg, vim.log.levels.ERROR, { title = "git-sync" })
+      end)
+    end,
+  })
+end
 
--- sync on open
-vim.api.nvim_create_autocmd("BufReadPre", {
-  group = "JrnlSync",
-  pattern = vim.fn.expand("~") .. "/jrnl/*",
-  callback = function()
-    vim.fn.system('git-auto-sync sync')
-    -- Show a confirmation message
-    -- vim.api.nvim_echo({ { "synced using git-auto-sync" } }, false, {})
-    -- vim.print({ { "synced using git-auto-sync" } }, false, {})
-    -- vim.notify("Synced using git-auto-sync", vim.log.levels.INFO)
-  end,
-})
+for _, vault in ipairs(vaults) do
+  local name = vim.fn.fnamemodify(vault.path, ":t")
 
--- 🔽 new one: disable swapfile for jrnl markdown
-vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
-  group = "JrnlSync",  -- you can reuse the group, no problem
-  pattern = vim.fn.expand("~") .. "/jrnl/*.md",
-  callback = function()
-    vim.opt_local.swapfile = false
-    vim.opt_local.undofile = true
-  end,
+  -- sync on save
+  vim.api.nvim_create_autocmd("BufWritePost", {
+    group = VaultSync,
+    pattern = vault.path .. "/*",
+    callback = function() sync(vault.path, name) end,
+  })
+
+  -- sync on open. async, unlike the old blocking git-auto-sync call — a pull
+  -- on a repo with big PDFs shouldn't freeze :e. The checktime timer below
+  -- reloads the buffer once the pull lands.
+  vim.api.nvim_create_autocmd("BufReadPre", {
+    group = VaultSync,
+    pattern = vault.path .. "/*",
+    callback = function() sync(vault.path, name) end,
+  })
+
+  vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+    group = VaultSync,
+    pattern = vault.path .. "/*.md",
+    callback = function()
+      vim.opt_local.swapfile = false
+      vim.opt_local.undofile = true
+      vim.opt_local.wrap = vault.wrap
+      vim.opt_local.linebreak = vault.wrap
+    end,
+  })
+end
+
+-- Reload buffers when a sync (or Obsidian, or another machine) rewrites a file
+-- underneath us. Without this you sit on a stale buffer and the next :w
+-- overwrites what was pulled.
+--
+-- A plain CursorHold autocmd would work, but its rate is `updatetime`, which is
+-- global — turning it down to catch file changes fast also makes every other
+-- CursorHold consumer (LSP hover, diagnostics, gitsigns) fire that often. A
+-- timer keeps the fast polling scoped to vault buffers.
+vim.opt.autoread = true
+
+local function in_vault(bufname)
+  for _, vault in ipairs(vaults) do
+    if bufname:sub(1, #vault.path + 1) == vault.path .. "/" then return true end
+  end
+  return false
+end
+
+local function checktime_if_vault()
+  -- checktime in cmdline mode or the cmdwin throws.
+  if vim.fn.mode() ~= "c" and vim.fn.getcmdwintype() == "" then
+    if in_vault(vim.api.nvim_buf_get_name(0)) then
+      pcall(vim.cmd.checktime)
+    end
+  end
+end
+
+local checktime_timer = vim.uv.new_timer()
+checktime_timer:start(1000, 1000, vim.schedule_wrap(checktime_if_vault))
+
+-- Catch changes the moment you come back to the window, without waiting a tick.
+vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "TermLeave" }, {
+  group = VaultSync,
+  callback = checktime_if_vault,
 })
 
 -- disable line wrapping in md file for readability
