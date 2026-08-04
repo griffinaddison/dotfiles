@@ -66,19 +66,38 @@ has_upstream() {
 # Returns 0 on success, 1 if worth retrying, 3 if a human has to look.
 sync_once() {
   if has_upstream; then
-    if ! git pull --rebase --autostash --quiet; then
-      # Never leave the repo mid-rebase. The next run would fail on the wedged
-      # state instead of on the real conflict, and it'd do it silently from a
-      # nvim job callback. Aborting also restores the autostash by itself —
-      # don't `stash pop` here or you may pop an unrelated entry.
-      git rebase --abort 2>/dev/null
-      return 3
+    # Deliberately not `git pull --rebase`. Pull rebases onto whatever it finds
+    # in FETCH_HEAD, and any other fetch running at the same time rewrites that
+    # file — Obsidian's Git plugin fetches this same repo every 15s. When the
+    # two overlap, pull sees more than one entry and dies with "Cannot rebase
+    # onto multiple branches." Reproduced 40 times out of 40 by racing a fetch
+    # against a pull.
+    #
+    # Fetching and then rebasing onto the tracking ref by name never reads
+    # FETCH_HEAD, so a concurrent fetch can't confuse it.
+    local upstream
+    upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}') || return 1
+    git fetch --quiet "$(git config --get branch.$BRANCH.remote)" || return 1
+
+    if ! git rebase --autostash --quiet "$upstream"; then
+      # Only a stopped rebase means a real conflict. Anything else that makes
+      # rebase exit nonzero is worth retrying, and calling it a conflict sends
+      # you looking for merge markers that aren't there.
+      if [[ -d "$GIT_DIR_PATH/rebase-merge" || -d "$GIT_DIR_PATH/rebase-apply" ]]; then
+        # Never leave the repo mid-rebase. The next run would fail on the wedged
+        # state instead of on the real conflict, and it'd do it silently from a
+        # nvim job callback. Aborting also restores the autostash by itself —
+        # don't `stash pop` here or you may pop an unrelated entry.
+        git rebase --abort 2>/dev/null
+        return 3
+      fi
+      return 1
     fi
   fi
 
-  # `pull --rebase --autostash` exits 0 even when re-applying the autostash
-  # conflicts. Without this check the next lines would `add -A` the conflict
-  # markers, commit them, and push them. Measured, not theoretical.
+  # `rebase --autostash` exits 0 even when re-applying the autostash conflicts.
+  # Without this check the next lines would `add -A` the conflict markers,
+  # commit them, and push them. Measured, not theoretical.
   if [[ -n "$(git diff --name-only --diff-filter=U)" ]]; then
     return 3
   fi
@@ -111,6 +130,6 @@ for i in {1..$TRIES}; do
   (( i < TRIES )) && sleep 2
 done
 
-print -u2 "git-sync: $REPO failed after $TRIES tries"
+print -u2 "git-sync: $REPO failed after $TRIES tries (not a conflict)"
 [[ -n "$err" ]] && print -u2 "$err"
 exit 1
