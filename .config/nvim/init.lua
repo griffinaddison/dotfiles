@@ -292,6 +292,65 @@ vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "TermLeave" }, {
   callback = checktime_if_vault,
 })
 
+-- Renaming a note in Obsidian leaves nvim holding a path that no longer exists.
+-- autoread doesn't cover this: nvim keeps the buffer and :w writes the file back
+-- out, so you end up with both names. That's how tech/roadmap.md came back after
+-- being renamed to "initial roadmap.md".
+--
+-- If the file is gone and the buffer has nothing unsaved, the buffer holds
+-- nothing the disk doesn't. Close it, no question asked. The checktime timer
+-- above means this happens about a second after the rename.
+vim.api.nvim_create_autocmd("FileChangedShell", {
+  group = VaultSync,
+  callback = function(a)
+    if vim.v.fcs_reason ~= "deleted" or not in_vault(a.file) then return end
+    vim.v.fcs_choice = ""
+    if vim.bo[a.buf].modified then
+      -- Unsaved work, so we can't just drop it. Warn without blocking; the
+      -- BufWritePre guard below asks properly if you try to write.
+      --
+      -- Once per buffer. checktime keeps firing this event every second for as
+      -- long as the file is missing, and a notification a second is unusable.
+      if vim.b[a.buf].vault_warned_deleted then return end
+      vim.b[a.buf].vault_warned_deleted = true
+      vim.schedule(function()
+        vim.notify(a.file .. "\nrenamed or deleted elsewhere, buffer has unsaved changes",
+          vim.log.levels.WARN, { title = "vault" })
+      end)
+    else
+      vim.schedule(function()
+        pcall(vim.api.nvim_buf_delete, a.buf, { force = false })
+        vim.notify(vim.fn.fnamemodify(a.file, ":t") .. ": closed, renamed elsewhere",
+          vim.log.levels.INFO, { title = "vault" })
+      end)
+    end
+  end,
+})
+
+-- The one case the rule above can't decide: the file is gone AND you have
+-- unsaved edits. Writing resurrects a file someone deleted on purpose; not
+-- writing throws away your work. Ask.
+vim.api.nvim_create_autocmd("BufReadPost", {
+  group = VaultSync,
+  callback = function(a)
+    if in_vault(a.file) then vim.b[a.buf].vault_existed = true end
+  end,
+})
+
+vim.api.nvim_create_autocmd("BufWritePre", {
+  group = VaultSync,
+  callback = function(a)
+    if not (vim.b[a.buf].vault_existed and in_vault(a.file)) then return end
+    if vim.uv.fs_stat(a.file) then return end
+    local choice = vim.fn.confirm(
+      a.file .. "\nwas deleted or renamed outside nvim. Write it back anyway?",
+      "&Write\n&Cancel", 2, "Warning")
+    if choice ~= 1 then
+      error("vault: write cancelled, file was renamed elsewhere")
+    end
+  end,
+})
+
 -- disable line wrapping in md file for readability
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "markdown",
