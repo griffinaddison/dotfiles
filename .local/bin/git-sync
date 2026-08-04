@@ -16,6 +16,16 @@ set -u
 REPO="${1:-}"
 TRIES=3
 STALE_LOCK_MIN=5
+# Cap on any single network call. Must stay well under STALE_LOCK_MIN so a hung
+# fetch can never outlive its own lock and let a second sync start alongside it.
+NET_TIMEOUT=20
+
+# Give git its own deadlines too, so it usually gives up before run_limited has
+# to kill it. SSH won't sit in connect() forever; HTTPS won't sit on a stalled
+# transfer forever.
+export GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh} -o ConnectTimeout=8 -o ServerAliveInterval=5 -o ServerAliveCountMax=2"
+export GIT_HTTP_LOW_SPEED_LIMIT=1000
+export GIT_HTTP_LOW_SPEED_TIME=15
 
 if [[ -z "$REPO" ]]; then
   print -u2 "usage: git-sync <repo>"
@@ -63,8 +73,50 @@ has_upstream() {
   git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' >/dev/null 2>&1
 }
 
+# macOS has no timeout(1). Run a command with a deadline and kill it if it
+# overruns. Without this, one unreachable remote hangs the sync for as long as
+# TCP takes to give up, all while holding the lock — so every later save
+# silently does nothing.
+run_limited() {
+  local secs=$1; shift
+  "$@" &
+  local pid=$! waited=0
+  while kill -0 $pid 2>/dev/null; do
+    if (( waited >= secs * 10 )); then
+      kill -9 $pid 2>/dev/null
+      wait $pid 2>/dev/null
+      return 124
+    fi
+    sleep 0.1
+    (( waited++ ))
+  done
+  wait $pid
+}
+
+# Renaming Foo.md to foo.md on a case-insensitive filesystem leaves BOTH paths
+# in the index. Git stats the old name, the new file answers, and the deletion
+# is never noticed. On your Mac you see one file; the commit has two, and a
+# teammate on Linux gets two. Drop index entries whose exact case isn't on disk.
+prune_case_ghosts() {
+  local ghosts
+  ghosts=$(comm -23 \
+    <(git ls-files | LC_ALL=C sort) \
+    <(find . -type f -not -path './.git/*' | sed 's|^\./||' | LC_ALL=C sort))
+  [[ -n "$ghosts" ]] && print -r -- "$ghosts" | tr '\n' '\0' | xargs -0 git rm --cached --quiet --
+  return 0
+}
+
 # Returns 0 on success, 1 if worth retrying, 3 if a human has to look.
 sync_once() {
+  # Commit BEFORE touching the network. A dead remote should cost you the push,
+  # not the commit. The old order fetched first, so an outage meant your work
+  # was never recorded anywhere — and the script still reported success.
+  prune_case_ghosts
+  if [[ -n "$(git status --porcelain)" ]]; then
+    git add -A || return 1
+    git commit -q -m "$(hostname -s): $(date '+%Y-%m-%d %H:%M')" || return 1
+  fi
+
   if has_upstream; then
     # Deliberately not `git pull --rebase`. Pull rebases onto whatever it finds
     # in FETCH_HEAD, and any other fetch running at the same time rewrites that
@@ -77,7 +129,7 @@ sync_once() {
     # FETCH_HEAD, so a concurrent fetch can't confuse it.
     local upstream
     upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}') || return 1
-    git fetch --quiet "$(git config --get branch.$BRANCH.remote)" || return 1
+    run_limited $NET_TIMEOUT git fetch --quiet "$(git config --get branch.$BRANCH.remote)" || return 1
 
     if ! git rebase --autostash --quiet "$upstream"; then
       # Only a stopped rebase means a real conflict. Anything else that makes
@@ -102,13 +154,8 @@ sync_once() {
     return 3
   fi
 
-  if [[ -n "$(git status --porcelain)" ]]; then
-    git add -A || return 1
-    git commit -q -m "$(hostname -s): $(date '+%Y-%m-%d %H:%M')" || return 1
-  fi
-
   if has_upstream; then
-    git push --quiet || return 1
+    run_limited $NET_TIMEOUT git push --quiet || return 1
   fi
 
   return 0
