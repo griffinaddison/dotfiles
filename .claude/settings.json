@@ -61,6 +61,7 @@
       "/usr/share"
     ]
   },
+  "model": "opus[1m]",
   "hooks": {
     "SessionStart": [
       {
@@ -107,8 +108,8 @@
     "clangd-lsp@claude-plugins-official": true
   },
   "effortLevel": "medium",
+  "remoteControlAtStartup": true,
   "skipDangerousModePermissionPrompt": true,
   "editorMode": "vim",
-  "skipAutoPermissionPrompt": true,
-  "model": "claude-fable-5[1m]"
+  "skipAutoPermissionPrompt": true
 }
