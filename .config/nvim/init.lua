@@ -187,16 +187,9 @@ vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
 -- ships in this dotfiles repo. It replaces git-auto-sync, which had to be
 -- installed separately on every machine — and often wasn't, so the sync failed
 -- silently inside the jobstart callback.
---
--- Neither vault wraps. kb sets `*.md merge=union` in .gitattributes, so notes
--- there are written one sentence per line. Union merges line by line, so
--- sentence-per-line means two people editing different sentences of the same
--- paragraph merge cleanly instead of duplicating. Those lines are long, so they
--- now run off the right edge. One screen line per sentence makes the sentence
--- breaks obvious. `:setl wrap` turns it back on for one buffer.
 local vaults = {
-  { path = vim.fn.expand("~") .. "/jrnl", wrap = false },
-  { path = vim.fn.expand("~") .. "/kb",   wrap = false },
+  { path = vim.fn.expand("~") .. "/jrnl" },
+  { path = vim.fn.expand("~") .. "/kb" },
 }
 
 local VaultSync = vim.api.nvim_create_augroup("VaultSync", { clear = true })
@@ -245,18 +238,33 @@ for _, vault in ipairs(vaults) do
     pattern = vault.path .. "/*",
     callback = function() sync(vault.path, name) end,
   })
-
-  vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
-    group = VaultSync,
-    pattern = vault.path .. "/*.md",
-    callback = function()
-      vim.opt_local.swapfile = false
-      vim.opt_local.undofile = true
-      vim.opt_local.wrap = vault.wrap
-      vim.opt_local.linebreak = vault.wrap
-    end,
-  })
 end
+
+-- Note buffers: the two vaults, plus ~/todo.md. todo.md is a loose file, not in
+-- any repo, because it lives on work laptops. It gets the editing options but
+-- not the syncing.
+--
+-- Nothing here wraps. kb sets `*.md merge=union` in .gitattributes, so notes
+-- there are written one sentence per line. Union merges line by line, so
+-- sentence-per-line means two people editing different sentences of the same
+-- paragraph merge cleanly instead of duplicating. Those lines are long, so they
+-- run off the right edge. One screen line per sentence makes the sentence
+-- breaks obvious. `:setl wrap` turns it back on for one buffer.
+local note_patterns = { vim.fn.expand("~") .. "/todo.md" }
+for _, vault in ipairs(vaults) do
+  table.insert(note_patterns, vault.path .. "/*.md")
+end
+
+vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+  group = VaultSync,
+  pattern = note_patterns,
+  callback = function()
+    vim.opt_local.swapfile = false
+    vim.opt_local.undofile = true
+    vim.opt_local.wrap = false
+    vim.opt_local.linebreak = false
+  end,
+})
 
 -- Reload buffers when a sync (or Obsidian, or another machine) rewrites a file
 -- underneath us. Without this you sit on a stale buffer and the next :w
