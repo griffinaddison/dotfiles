@@ -188,14 +188,15 @@ vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
 -- installed separately on every machine — and often wasn't, so the sync failed
 -- silently inside the jobstart callback.
 --
--- `wrap` differs per vault. kb sets `*.md merge=union` in .gitattributes, so
--- notes there are written one sentence per line. Union merges line by line, so
+-- Neither vault wraps. kb sets `*.md merge=union` in .gitattributes, so notes
+-- there are written one sentence per line. Union merges line by line, so
 -- sentence-per-line means two people editing different sentences of the same
--- paragraph merge cleanly instead of duplicating. Those lines are long, hence
--- wrap.
+-- paragraph merge cleanly instead of duplicating. Those lines are long, so they
+-- now run off the right edge. One screen line per sentence makes the sentence
+-- breaks obvious. `:setl wrap` turns it back on for one buffer.
 local vaults = {
   { path = vim.fn.expand("~") .. "/jrnl", wrap = false },
-  { path = vim.fn.expand("~") .. "/kb",   wrap = true },
+  { path = vim.fn.expand("~") .. "/kb",   wrap = false },
 }
 
 local VaultSync = vim.api.nvim_create_augroup("VaultSync", { clear = true })
