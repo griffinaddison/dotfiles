@@ -1122,6 +1122,20 @@ require("lazy").setup({
       enabled = true,
       config = function()
         require("smart-splits").setup({
+          -- when both nvim and the tmux pane are at the edge, wrap to the
+          -- next/prev tmux session (vertical) or window (horizontal),
+          -- matching ~/.config/tmux/ctrl-window-wrap.tmux
+          at_edge = function(ctx)
+            local cmd = ({
+              down  = "switch-client -n",
+              up    = "switch-client -p",
+              left  = "previous-window",
+              right = "next-window",
+            })[ctx.direction]
+            if cmd then
+              vim.fn.system("tmux " .. cmd)
+            end
+          end,
           vim.keymap.set('n', '<A-h>', require('smart-splits').resize_left),
           vim.keymap.set('n', '<A-j>', require('smart-splits').resize_down),
           vim.keymap.set('n', '<A-k>', require('smart-splits').resize_up),
