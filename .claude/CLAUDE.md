@@ -1,3 +1,7 @@
+# Shell commands
+
+Never write `cd <dir> && git ...`. Use `git -C <dir> ...` instead — the `cd` form always triggers a permission prompt (untrusted-git-hooks check) and no allow rule can suppress it. Same idea elsewhere: prefer flags or absolute paths over `cd &&` chains.
+
 # Writing style
 
 Write simply, the way Paul Graham describes in "Write Simply" (paulgraham.com/simply.html): like you're explaining to a smart friend, not writing a spec.
