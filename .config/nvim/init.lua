@@ -39,11 +39,13 @@ vim.opt.relativenumber = true
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
 
--- Inherit colors from the terminal/tmux instead of using a truecolor theme.
--- With termguicolors OFF, nvim uses cterm (ANSI palette indices 0-15), which
--- are exactly the 16 colors your terminal emulator defines. Set it true again
--- (and re-enable a theme like bamboo below) to go back to a self-contained scheme.
-vim.opt.termguicolors = false
+-- Truecolor is required, not just cosmetic: snacks.image draws inline images
+-- with kitty unicode placeholders, which carry the image id in each cell's
+-- 24-bit foreground color. With termguicolors off nvim emits plain ANSI, the
+-- id never arrives, and Ghostty reserves the space but paints nothing.
+-- Set this back to false to inherit the terminal/tmux 16-color palette, at the
+-- cost of inline images. A theme (bamboo, below) is optional either way.
+vim.opt.termguicolors = true
 
 -- -- Enable autoindent (match prev line indent) and smartindent (auto indent after : and stuff)
 -- vim.opt.autoindent = true
@@ -1450,7 +1452,16 @@ require("lazy").setup({
         dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-tree/nvim-web-devicons' }, -- if you prefer nvim-web-devicons
         -- -@module 'render-markdown'
         ---@type render.md.UserConfig
-        opts = {},
+        opts = {
+          -- The default checkbox icons are Nerd Font glyphs. No Nerd Font is
+          -- installed, so they render as a stray "_". Plain ASCII instead;
+          -- the plugin still colors them. Swap back to '󰄱 ' / '󰱒 ' after
+          -- setting a Nerd Font in ~/.config/ghostty/config.
+          checkbox = {
+            unchecked = { icon = '[ ]' },
+            checked = { icon = '[x]' },
+          },
+        },
     },
 
 {
@@ -1458,13 +1469,75 @@ require("lazy").setup({
   ft = { 'markdown' },
   init = function()
     vim.g.bullets_enabled_file_types = { 'markdown' }
+    -- plain GitHub-style checkboxes: [ ] and [x], no partial states
+    vim.g.bullets_checkbox_markers = ' x'
+    -- keep "-" at every nesting level (default cycles ROM/ABC/nums)
+    vim.g.bullets_outline_levels = { 'std-' }
   end,
 },
 
 {
   'folke/snacks.nvim',
+  init = function()
+    -- snacks.image figures out it's talking to Ghostty by querying the
+    -- terminal. Inside tmux the reply never comes back, so it decides the
+    -- terminal can't do graphics and silently draws nothing.
+    -- Tell it directly, if we can establish this really is Ghostty.
+    local function ghostty()
+      if vim.env.GHOSTTY_RESOURCES_DIR or vim.env.GHOSTTY_BIN_DIR then
+        return true
+      end
+      if (vim.env.TERM or ''):find('ghostty') then
+        return true
+      end
+      -- Panes that predate Ghostty's env landing in the tmux server don't have
+      -- those vars, so ask tmux what the attached client is actually running.
+      if vim.env.TMUX then
+        local out = vim.fn.system({ 'tmux', 'display', '-p', '#{client_termname}' })
+        return vim.v.shell_error == 0 and out:find('ghostty') ~= nil
+      end
+      return false
+    end
+    if ghostty() then
+      vim.env.SNACKS_GHOSTTY = '1'
+    end
+  end,
   opts = {
-    image = {},
+    image = {
+      -- Obsidian's ![[foo.png]] resolves anywhere in the vault. snacks only
+      -- looks next to the file and under cwd, so an image parked at the vault
+      -- root never resolves from a note in a subfolder. Search the vault.
+      resolve = function(file, src)
+        if src:find('^%w%w+://') or src:find('^/') then
+          return nil
+        end
+        local root = vim.fs.root(file, '.obsidian')
+        if not root then
+          return nil
+        end
+        local name = vim.fs.basename(src)
+        for _, dir in ipairs({ '', 'attachments/', 'assets/', 'images/', 'img/' }) do
+          local p = root .. '/' .. dir .. name
+          if vim.fn.filereadable(p) == 1 then
+            return p
+          end
+        end
+        local hits = vim.fn.globpath(root, '**/' .. name, false, true)
+        return hits[1]
+      end,
+      convert = {
+        -- Videos render as a single still (frame 0), never playback.
+        -- ImageMagick shells out to ffmpeg and asks for a webp intermediate,
+        -- but this Homebrew ffmpeg has no webp encoder, so it dies with
+        -- "Unknown encoder 'webp'". pam works and needs no extra codec.
+        magick = {
+          mp4 = { '-define', 'video:intermediate-format=pam', '{src}[0]', '-scale', '1920x1080>' },
+          mov = { '-define', 'video:intermediate-format=pam', '{src}[0]', '-scale', '1920x1080>' },
+          avi = { '-define', 'video:intermediate-format=pam', '{src}[0]', '-scale', '1920x1080>' },
+          webm = { '-define', 'video:intermediate-format=pam', '{src}[0]', '-scale', '1920x1080>' },
+        },
+      },
+    },
   },
 },
 
