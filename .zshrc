@@ -140,14 +140,14 @@ ssh() {
     fi
 }
 
-# Attach to the tmux session on hub, starting it if it isn't running.
-# `new-session -A` attaches to `main` when it exists and creates it otherwise,
-# so this is the same command either way. The title printf mirrors the ssh
-# wrapper above, which can't work it out here because the last argument is the
-# tmux command rather than the host.
+# Attach to tmux on hub. Bare `attach` picks the session you used last, which
+# is almost always the one you want; the `new-session` only fires when the
+# server has no sessions at all. The title printf mirrors the ssh wrapper
+# above, which can't work it out here because the last argument is the tmux
+# command rather than the host.
 hub() {
     printf '\e]2;SSH: hub\e\\'
-    command ssh -t hub 'tmux new-session -A -s main'
+    command ssh -t hub 'tmux attach 2>/dev/null || tmux new-session -s main'
     printf '\e]2;%s\e\\' "$(hostname -s)"
 }
 
