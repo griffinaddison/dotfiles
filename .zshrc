@@ -140,6 +140,17 @@ ssh() {
     fi
 }
 
+# Attach to the tmux session on hub, starting it if it isn't running.
+# `new-session -A` attaches to `main` when it exists and creates it otherwise,
+# so this is the same command either way. The title printf mirrors the ssh
+# wrapper above, which can't work it out here because the last argument is the
+# tmux command rather than the host.
+hub() {
+    printf '\e]2;SSH: hub\e\\'
+    command ssh -t hub 'tmux new-session -A -s main'
+    printf '\e]2;%s\e\\' "$(hostname -s)"
+}
+
 # Dotfiles
 dotpull() {
     cd ~/.dotfiles \
