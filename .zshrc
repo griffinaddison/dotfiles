@@ -145,9 +145,14 @@ ssh() {
 # server has no sessions at all. The title printf mirrors the ssh wrapper
 # above, which can't work it out here because the last argument is the tmux
 # command rather than the host.
+#
+# The trailing `exec $SHELL -l` is what keeps you on hub after `C-b d`. tmux is
+# the remote command, so without it detaching ends the command and ssh closes
+# with it. Now detaching drops you into a login shell there instead; `exit`
+# leaves.
 hub() {
     printf '\e]2;SSH: hub\e\\'
-    command ssh -t hub 'tmux attach 2>/dev/null || tmux new-session -s main'
+    command ssh -t hub 'tmux attach 2>/dev/null || tmux new-session -s main; exec "$SHELL" -l'
     printf '\e]2;%s\e\\' "$(hostname -s)"
 }
 
