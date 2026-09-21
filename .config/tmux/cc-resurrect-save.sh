@@ -8,7 +8,49 @@
 state_file="$1"
 [ -z "$state_file" ] || [ ! -f "$state_file" ] && exit 0
 
-# Quick check: any claude panes to process?
+# Pre-pass: a pane launched as a bare command (tmux new-window "claude --resume X",
+# no shell underneath) has pane_pid = the process itself. resurrect only records
+# CHILDREN of pane_pid, so it saves an empty command and the pane is lost on
+# restore. Read the real command line from /proc and fill it in for claude/codex.
+prepass_map="$(mktemp)"
+grep $'\t:$' "$state_file" | grep '^pane' \
+    | while IFS=$'\t' read -r _ sess win _ _ pane _ _ _ _ _; do
+        pid="$(tmux display-message -t "${sess}:${win}.${pane}" -p '#{pane_pid}' 2>/dev/null)"
+        [ -n "$pid" ] || continue
+        cmdline=""
+        for p in "$pid" $(pgrep -P "$pid" 2>/dev/null); do
+            c="$(tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null)"
+            cmdline="$cmdline $c"
+        done
+        new=""
+        id="$(echo "$cmdline" | grep -oE 'claude( [^ ]+)* --resume [0-9a-f-]{36}' | grep -oE '[0-9a-f-]{36}$' | head -1)"
+        if [ -n "$id" ]; then
+            new=":claude --resume $id"
+        elif echo "$cmdline" | grep -qE '(^| )claude( |$)'; then
+            new=":claude"   # fresh claude, no --resume; breadcrumb logic below fills it in
+        else
+            id="$(echo "$cmdline" | grep -oE 'codex( [^ ]+)* resume [0-9a-f-]{36}' | grep -oE '[0-9a-f-]{36}$' | head -1)"
+            [ -n "$id" ] && new=":codex --yolo resume $id"
+        fi
+        [ -n "$new" ] || continue
+        printf '%s\t%s\t%s\t%s\n' "$sess" "$win" "$pane" "$new" >> "$prepass_map"
+    done
+if [ -s "$prepass_map" ]; then
+    tmp_file="$(mktemp)"
+    awk -F'\t' -v OFS='\t' -v mapfile="$prepass_map" '
+        BEGIN { while ((getline line < mapfile) > 0) { split(line, f, "\t"); m[f[1] "|" f[2] "|" f[3]] = f[4] } }
+        $1 == "pane" && $NF == ":" { k = $2 "|" $3 "|" $6; if (k in m) $NF = m[k] }
+        { print }
+    ' "$state_file" > "$tmp_file"
+    mv "$tmp_file" "$state_file"
+fi
+rm -f "$prepass_map"
+
+# Codex panes: resurrect records the full musl binary path; restore with the
+# user's normal invocation instead so the --yolo alias behaviour is kept.
+sed -i -E 's#\t:[^\t]*/codex resume ([0-9a-f-]{36})$#\t:codex --yolo resume \1#' "$state_file"
+
+# Quick check: any bare claude panes left to process?
 grep -q $'\t:claude$' "$state_file" || exit 0
 
 breadcrumb_dir="$HOME/.cache/claude-tmux"
