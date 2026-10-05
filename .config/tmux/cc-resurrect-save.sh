@@ -28,9 +28,18 @@ grep $'\t:$' "$state_file" | grep '^pane' \
             new=":claude --resume $id"
         elif echo "$cmdline" | grep -qE '(^| )claude( |$)'; then
             new=":claude"   # fresh claude, no --resume; breadcrumb logic below fills it in
-        else
-            id="$(echo "$cmdline" | grep -oE 'codex( [^ ]+)* resume [0-9a-f-]{36}' | grep -oE '[0-9a-f-]{36}$' | head -1)"
-            [ -n "$id" ] && new=":codex --yolo resume $id"
+        elif echo "$cmdline" | grep -qE '(^| |/)codex( |$)'; then
+            # Codex: a UUID anywhere + a `resume` token means an already-resumed
+            # session; otherwise it is fresh and we mark it :codex --yolo for the
+            # cwd-based fallback below to turn into `resume --yolo --last`.
+            # NOTE: --yolo must come AFTER the subcommand (codex --yolo resume
+            # does not parse; codex resume --yolo does).
+            cid="$(echo "$cmdline" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)"
+            if echo "$cmdline" | grep -qw resume && [ -n "$cid" ]; then
+                new=":codex resume --yolo $cid"
+            else
+                new=":codex --yolo"
+            fi
         fi
         [ -n "$new" ] || continue
         printf '%s\t%s\t%s\t%s\n' "$sess" "$win" "$pane" "$new" >> "$prepass_map"
@@ -46,9 +55,29 @@ if [ -s "$prepass_map" ]; then
 fi
 rm -f "$prepass_map"
 
-# Codex panes: resurrect records the full musl binary path; restore with the
-# user's normal invocation instead so the --yolo alias behaviour is kept.
-sed -i -E 's#\t:[^\t]*/codex resume ([0-9a-f-]{36})$#\t:codex --yolo resume \1#' "$state_file"
+# Codex panes: resurrect records the full binary path, and for a FRESH codex
+# there is no session id in the command at all. Normalise every codex pane in
+# one awk pass:
+#   * already on a session (has `resume` + a UUID) -> codex resume --yolo <uuid>
+#   * fresh (no `resume`), and the ONLY codex pane in its cwd -> codex resume
+#     --yolo --last. codex filters --last by cwd, and a pane that was running
+#     proves a session for that cwd exists, so --last lands on it. Dirs with two+
+#     codex panes are left fresh (ambiguous), same as the claude fallback.
+# NOTE: `--yolo` must follow the `resume` subcommand; `codex --yolo resume` does
+# not parse.
+codex_tmp="$(mktemp)"
+awk -F'\t' -v OFS='\t' '
+    function has_codex(c) { return c ~ /(^|[ /:])codex( |$)/ }
+    function uuid(c) { if (match(c, /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/)) return substr(c, RSTART, RLENGTH); return "" }
+    FNR==NR { if ($1 == "pane" && has_codex($NF) && $NF !~ /resume/) fresh[$8]++; next }
+    $1 == "pane" && has_codex($NF) {
+        id = uuid($NF)
+        if ($NF ~ /resume/ && id != "")        { $NF = ":codex resume --yolo " id }
+        else if ($NF !~ /resume/ && fresh[$8] == 1) { $NF = ":codex resume --yolo --last" }
+    }
+    { print }
+' "$state_file" "$state_file" > "$codex_tmp" && mv "$codex_tmp" "$state_file"
+rm -f "$codex_tmp"
 
 # Quick check: any bare claude panes left to process?
 grep -q $'\t:claude$' "$state_file" || exit 0
