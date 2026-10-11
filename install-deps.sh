@@ -301,9 +301,15 @@ elif $INSTALL_KANATA && command -v apt-get &> /dev/null; then
         source "$HOME/.cargo/env"
     fi
 
-    # Build and install kanata via cargo
-    cargo install kanata
+    # Build and install kanata via cargo. The cmd feature lets the config run
+    # ddcutil for monitor brightness (space+f1/f2).
+    cargo install kanata --features cmd
     $SUDO cp "$HOME/.cargo/bin/kanata" /usr/local/bin/
+
+    # ddcutil sets external monitor brightness over DDC/CI. It needs i2c-dev.
+    $SUDO apt-get install -y ddcutil
+    echo i2c-dev | $SUDO tee /etc/modules-load.d/i2c-dev.conf > /dev/null
+    $SUDO modprobe i2c-dev
 
     # Copy Linux-specific config
     $SUDO mkdir -p /etc/kanata

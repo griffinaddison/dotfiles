@@ -4,6 +4,9 @@ Linux-specific kanata config (no fn key - it's Mac-only)
 
 (defcfg
   process-unmapped-keys yes
+  ;; Needed for the brightness aliases below. Requires a kanata built with
+  ;; the cmd feature (install-deps.sh does this).
+  danger-enable-cmd yes
 )
 
 (defsrc
@@ -27,11 +30,17 @@ Linux-specific kanata config (no fn key - it's Mac-only)
 (defalias
   cap (tap-hold-press 200 9999 esc lctl)
   spacefn (tap-hold-release-keys 200 9999 spc (layer-while-held spacefn) (lsft rsft))
+
+  ;; External monitors ignore the normal brightness keys on Linux, so set
+  ;; brightness over DDC/CI instead. Same keys as the Mac config.
+  ;; Bus 6 is the ASRock PGO32UFS; find yours with `ddcutil detect`.
+  brdn (cmd ddcutil --bus 6 --noverify setvcp 10 - 10)
+  brup (cmd ddcutil --bus 6 --noverify setvcp 10 + 10)
 )
 
 (deflayer spacefn
-    esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
-    grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+    esc  @brdn @brup f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+    grv  @brdn @brup 3    4    5    6    7    8    9    0    -    =    bspc
     tab  q    w    e    r    t    y    u    i    o    p    [    ]
     @cap a    s    d    f    g    left down up   right ;    '    \    ret
     lsft z    x    c    v    b    n    m    ,    .    /    rsft
