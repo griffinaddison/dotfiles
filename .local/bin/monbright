@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# monbright <+N|-N> — nudge external monitor brightness over DDC/CI.
+#
+# Called from kanata (space+f1/f2). Each ddcutil call takes ~0.2 s, and two
+# calls at once collide on the monitor's I2C bus and fail. So rapid taps can't
+# each run ddcutil. Instead:
+#
+#   1. Every tap adds its step to a target value in a state file. This is fast.
+#   2. Only one process at a time sends the target to the monitor. It keeps
+#      going until the target stops changing, so fast taps add up.
+#
+# The target expires after 10 s, so changes made with the monitor's own buttons
+# get picked up on the next tap.
+
+set -u
+
+STEP="${1:?usage: monbright +10|-10}"
+BUS="${MONBRIGHT_BUS:-6}"   # find yours with `ddcutil detect`
+DIR="/tmp/monbright-$(id -u)"
+TARGET="$DIR/target"
+APPLIED="$DIR/applied"
+DDC=(ddcutil --bus "$BUS" --noverify --sleep-multiplier .2)
+
+mkdir -p "$DIR"
+
+# Step 1: update the target.
+exec 8>"$DIR/state.lock"
+flock 8
+if [[ -f "$TARGET" ]] && (( $(date +%s) - $(stat -c %Y "$TARGET") < 10 )); then
+    cur=$(<"$TARGET")
+else
+    # `getvcp --terse` prints "VCP 10 C <current> <max>".
+    cur=$("${DDC[@]}" getvcp 10 --terse | awk '{print $4}')
+    [[ "$cur" =~ ^[0-9]+$ ]] || exit 1
+    echo "$cur" > "$APPLIED"
+fi
+new=$(( cur + STEP ))
+(( new < 0 )) && new=0
+(( new > 100 )) && new=100
+echo "$new" > "$TARGET"
+flock -u 8
+
+# Step 2: send the target to the monitor, unless another tap already is.
+exec 9>"$DIR/apply.lock"
+while true; do
+    flock -n 9 || exit 0
+    while true; do
+        want=$(<"$TARGET")
+        [[ "$want" == "$(cat "$APPLIED" 2>/dev/null)" ]] && break
+        # Retry once, then give up (e.g. the monitor is asleep).
+        "${DDC[@]}" setvcp 10 "$want" || "${DDC[@]}" setvcp 10 "$want" || exit 1
+        echo "$want" > "$APPLIED"
+    done
+    flock -u 9
+    # A tap may have landed just after our last check but before we unlocked.
+    # If so, the target moved and nobody is sending it. Go around again.
+    [[ "$(<"$TARGET")" == "$(cat "$APPLIED" 2>/dev/null)" ]] && exit 0
+done

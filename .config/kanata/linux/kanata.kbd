@@ -32,16 +32,17 @@ Linux-specific kanata config (no fn key - it's Mac-only)
   spacefn (tap-hold-release-keys 200 9999 spc (layer-while-held spacefn) (lsft rsft))
 
   ;; External monitors ignore the normal brightness keys on Linux, so set
-  ;; brightness over DDC/CI instead. Same keys as the Mac config.
-  ;; Bus 6 is the ASRock PGO32UFS; find yours with `ddcutil detect`.
-  brdn (cmd ddcutil --bus 6 --noverify setvcp 10 - 10)
-  brup (cmd ddcutil --bus 6 --noverify setvcp 10 + 10)
+  ;; brightness over DDC/CI instead. monbright adds up fast taps, since
+  ;; overlapping ddcutil calls fail. Same keys as the Mac config.
+  brdn (cmd /home/griffin/.local/bin/monbright -10)
+  brup (cmd /home/griffin/.local/bin/monbright +10)
 )
 
+;; Media and volume keys match the Mac config. GNOME handles them natively.
 (deflayer spacefn
-    esc  @brdn @brup f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
-    grv  @brdn @brup 3    4    5    6    7    8    9    0    -    =    bspc
-    tab  q    w    e    r    t    y    u    i    o    p    [    ]
+    esc  @brdn @brup ✗    ✗    ✗    ✗    ◀◀   ▶⏸   ▶▶   🔇   🔉   🔊
+    grv  @brdn @brup 3    4    ◀◀   ▶⏸   ▶▶   🔇   🔉   🔊   -    =    bspc
+    tab  q    w    e    r    t    y    ◀◀   ▶⏸   ▶▶   p    [    ]
     @cap a    s    d    f    g    left down up   right ;    '    \    ret
     lsft z    x    c    v    b    n    m    ,    .    /    rsft
     lctl lalt lmet           @spacefn            rmet ralt rctl
