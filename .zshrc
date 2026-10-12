@@ -96,11 +96,20 @@ export RCUTILS_COLORIZED_OUTPUT=1
 
 # Kill the ROS 2 daemon, every ROS/DDS process, and stale DDS shared memory.
 # Use it when nodes hang, discovery goes stale, or `ros2` commands act haunted.
+# Name-free kill, three passes:
+#   1. argv marker: every ros2-launched/run node carries --ros-args
+#   2. ros2 CLI / launch parent processes
+#   3. anything with /opt/ros libs mapped into memory (rclpy plugins, daemon,
+#      stragglers -- a process can hide its argv but not its loaded .so files)
+# WARNING: SIGKILL, no teardown -- also takes out running lerobot evals
+# (their robot plugins load rclpy). Your shell itself is safe.
 ros2_nuke() {
     echo "ros2_nuke: stopping daemon"
     ros2 daemon stop 2>/dev/null
     echo "ros2_nuke: killing ROS/DDS processes"
-    pkill -9 -f '(_ros2_daemon|ros2cli|rmw_|fastdds|fast_discovery|discovery_server|rviz2|robot_state_publisher|component_container|controller_manager|mujoco_ros2|ros_gz|gzserver|gzclient)' 2>/dev/null
+    pkill -9 -f -- '--ros-args' 2>/dev/null
+    pkill -9 -f '/opt/ros/.*/bin/ros2' 2>/dev/null
+    grep -l '/opt/ros/' /proc/[0-9]*/maps 2>/dev/null | cut -d/ -f3 | xargs -r kill -9 2>/dev/null
     echo "ros2_nuke: clearing DDS shared memory"
     rm -rf /dev/shm/fastrtps_* /dev/shm/sem.fastrtps_* /dev/shm/fast_datasharing_* /dev/shm/*fastdds* /dev/shm/sem.*fastdds* 2>/dev/null
     ros2 daemon start 2>/dev/null
