@@ -10,6 +10,7 @@
 !.config/kanata/
 !.config/kitty/
 !.config/nvim/
+!.config/rex/
 !.config/skhd/
 !.config/tmux/
 
