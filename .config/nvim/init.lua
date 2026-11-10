@@ -31,6 +31,39 @@ vim.g.smoothie_exponential_factor = 1.0
 
 
 vim.api.nvim_set_option("clipboard", "unnamedplus") -- Merge nvim and linux clipboards
+
+-- In Rex on a remote box (hub), nvim can't read the Mac clipboard: there is no
+-- clipboard tool here and Rex doesn't answer OSC 52 reads. So `p`/`P` ask the
+-- Rex app to paste, the same as Cmd-V; nvim takes a paste in Normal mode like
+-- a put. If the last thing copied was an nvim yank (no focus change since),
+-- use the normal put so linewise yanks (yy) still paste as lines.
+if vim.env.TERM_PROGRAM == "rex" and vim.fn.executable("rex") == 1
+    and vim.fn.has("mac") == 0 then
+  local rex_client, own_yank = nil, false
+  local function find_client()
+    local out = vim.fn.system({ "rex", "client", "ls", "--json" })
+    local ok, data = pcall(vim.json.decode, out)
+    if not ok or type(data) ~= "table" then return nil end
+    for _, c in ipairs(data.clients or {}) do
+      local info = c.info or {}
+      if info.kind == "app" then return info.label or c.client_id end
+    end
+  end
+  vim.api.nvim_create_autocmd("TextYankPost", { callback = function() own_yank = true end })
+  vim.api.nvim_create_autocmd("FocusLost", { callback = function() own_yank = false end })
+  local function rex_put(key)
+    return function()
+      if own_yank or vim.v.register ~= '"' and vim.v.register ~= "+" then
+        return vim.api.nvim_feedkeys(vim.v.count1 .. key, "n", false)
+      end
+      rex_client = rex_client or find_client()
+      if not rex_client then return vim.api.nvim_feedkeys(key, "n", false) end
+      vim.fn.jobstart({ "rex", "do", "-C", rex_client, "pane.paste" })
+    end
+  end
+  vim.keymap.set("n", "p", rex_put("p"), { desc = "Paste Mac clipboard via Rex" })
+  vim.keymap.set("n", "P", rex_put("P"), { desc = "Paste Mac clipboard via Rex" })
+end
 vim.opt.tabstop = 2
 vim.opt.shiftwidth = 2
 vim.opt.expandtab = true -- turn tab into space, to prevent different editors (and github) from screwing up spacing w/ different tab -> space ratio
