@@ -1524,8 +1524,9 @@ require("lazy").setup({
     vim.g.bullets_enabled_file_types = { 'markdown' }
     -- plain GitHub-style checkboxes: [ ] and [x], no partial states
     vim.g.bullets_checkbox_markers = ' x'
-    -- keep "-" at every nesting level (default cycles ROM/ABC/nums)
-    vim.g.bullets_outline_levels = { 'std-' }
+    -- Indenting a numbered item goes 1. -> a. -> i. -> "-".
+    -- A "-" list stays "-" at every level.
+    vim.g.bullets_outline_levels = { 'num', 'abc', 'rom', 'std-' }
   end,
 },
 
