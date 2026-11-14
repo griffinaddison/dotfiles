@@ -12,6 +12,37 @@ vim.opt_local.tabstop = 2
 vim.opt_local.shiftwidth = 2
 vim.opt_local.expandtab = true
 
+-- Tab/S-Tab on a numbered item: shift it one level and pick the marker from
+-- the indent depth: 1. -> a. -> i. -> "-". bullets.vim picks the marker from
+-- the item above instead, so pressing Tab twice on one line stayed "a.".
+-- Then renumber, so the new item counts from its siblings. "-" items and
+-- plain text just shift, like <C-t>/<C-d>.
+local depth_marker = { "1", "a", "i" }
+
+local function shift_item(dir)
+  local text = vim.fn.getline(".")
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local sw = vim.fn.shiftwidth()
+  local ind, closure, rest = text:match("^(%s*)%w+([.)]) (.*)$")
+  if ind then
+    if dir < 0 and #ind == 0 then return end
+    local new_ind = math.max(0, #ind + dir * sw)
+    local marker = depth_marker[math.floor(new_ind / sw) + 1]
+    local head = marker and (marker .. closure) or "-"
+    vim.fn.setline(row, string.rep(" ", new_ind) .. head .. " " .. rest)
+    vim.cmd("silent! RenumberList")
+  else
+    local lead = text:match("^%s*")
+    local body = text:sub(#lead + 1)
+    vim.fn.setline(row, string.rep(" ", math.max(0, #lead + dir * sw)) .. body)
+  end
+  local now = vim.fn.getline(row)
+  vim.api.nvim_win_set_cursor(0, { row, math.max(0, col + #now - #text) })
+end
+
+vim.keymap.set("i", "<Tab>", function() shift_item(1) end, { buffer = true, desc = "indent list item" })
+vim.keymap.set("i", "<S-Tab>", function() shift_item(-1) end, { buffer = true, desc = "dedent list item" })
+
 -- bullets.vim only renumbers through its own keys (o, Enter, Tab, >>).
 -- After any other edit next to a numbered item (dd, x, p, visual d...),
 -- renumber the list. undojoin folds it into that edit, so one `u` undoes

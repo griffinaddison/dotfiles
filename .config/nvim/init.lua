@@ -110,12 +110,7 @@ vim.keymap.set('n', ']b', ':bnext<CR>', { noremap = true, silent = true })
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "markdown",
   callback = function()
-    -- Tab/S-Tab: indent/dedent through bullets.vim, so a nested numbered list
-    -- restarts at 1 and the outer list is renumbered. Plain <C-t>/<C-d> just
-    -- shifted the text and kept the old number. On non-list lines it acts
-    -- like <C-t>/<C-d>.
-    vim.keymap.set("i", "<Tab>", "<Plug>(bullets-demote)", { buffer = true })
-    vim.keymap.set("i", "<S-Tab>", "<Plug>(bullets-promote)", { buffer = true })
+    -- Tab/S-Tab in insert mode live in after/ftplugin/markdown.lua.
     -- auto indent: match prev line; smart indent: indent after : and stuff
     vim.opt_local.autoindent = true
     vim.opt_local.smartindent = true
