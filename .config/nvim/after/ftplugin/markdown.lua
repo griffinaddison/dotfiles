@@ -12,6 +12,25 @@ vim.opt_local.tabstop = 2
 vim.opt_local.shiftwidth = 2
 vim.opt_local.expandtab = true
 
+-- bullets.vim only renumbers through its own keys (o, Enter, Tab, >>).
+-- After any other edit next to a numbered item (dd, x, p, visual d...),
+-- renumber the list. undojoin folds it into that edit, so one `u` undoes
+-- both. Skip undo/redo, or `u` would renumber again and fight you.
+vim.api.nvim_create_autocmd("TextChanged", {
+  buffer = 0,
+  callback = function()
+    local ut = vim.fn.undotree()
+    if ut.seq_cur ~= ut.seq_last then return end
+    local l = vim.fn.line(".")
+    local function numbered(n) return vim.fn.getline(n):match("^%s*%d+[.)] ") end
+    if not (numbered(l) or numbered(l - 1) or numbered(l + 1)) then return end
+    local view = vim.fn.winsaveview()
+    pcall(vim.cmd, "undojoin")
+    vim.cmd("silent! RenumberList")
+    vim.fn.winrestview(view)
+  end,
+})
+
 -- <leader>X: "- item" <-> "- [ ] item"  (removes [x] too)
 local function checkbox_add_remove(lnum)
   local line = vim.fn.getline(lnum)

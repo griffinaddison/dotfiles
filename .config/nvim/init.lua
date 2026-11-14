@@ -110,9 +110,12 @@ vim.keymap.set('n', ']b', ':bnext<CR>', { noremap = true, silent = true })
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "markdown",
   callback = function()
-    -- Tab: indent bullet
-    vim.api.nvim_buf_set_keymap(0, "i", "<Tab>", "<C-t>", { noremap = true })
-    vim.api.nvim_buf_set_keymap(0, "i", "<S-Tab>", "<C-d>", { noremap = true })
+    -- Tab/S-Tab: indent/dedent through bullets.vim, so a nested numbered list
+    -- restarts at 1 and the outer list is renumbered. Plain <C-t>/<C-d> just
+    -- shifted the text and kept the old number. On non-list lines it acts
+    -- like <C-t>/<C-d>.
+    vim.keymap.set("i", "<Tab>", "<Plug>(bullets-demote)", { buffer = true })
+    vim.keymap.set("i", "<S-Tab>", "<Plug>(bullets-promote)", { buffer = true })
     -- auto indent: match prev line; smart indent: indent after : and stuff
     vim.opt_local.autoindent = true
     vim.opt_local.smartindent = true
@@ -400,6 +403,23 @@ vim.api.nvim_create_autocmd("FileType", {
   pattern = "markdown",
   callback = function()
     vim.opt_local.wrap = false
+  end,
+})
+
+-- With nowrap, typing at the end of a long line scrolls the view right. Then
+-- Enter (or o) jumps the cursor back to the indent, and vim scrolls left only
+-- until the cursor is visible, so the indent ends up hidden at the left edge.
+-- Whenever the cursor fits with the view scrolled fully left, scroll fully left.
+vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+  callback = function()
+    if vim.wo.wrap then return end
+    local view = vim.fn.winsaveview()
+    if view.leftcol == 0 then return end
+    local textoff = vim.fn.getwininfo(vim.api.nvim_get_current_win())[1].textoff
+    local width = vim.api.nvim_win_get_width(0) - textoff
+    if vim.fn.virtcol(".") < width then
+      vim.fn.winrestview({ leftcol = 0 })
+    end
   end,
 })
 
