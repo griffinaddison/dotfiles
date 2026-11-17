@@ -130,3 +130,38 @@ writes that Claude had not flushed. No server restart is needed to install it.
 Validation: `python3 -m unittest discover -s tests -p test_rex_claude.py`.
 References: [Rex restart behavior](https://www.superlogical.com/rex/docs/linux/upgrading)
 and [Claude session hooks](https://code.claude.com/docs/en/hooks#sessionstart).
+
+### Codex and Neovim recovery in Rex
+
+The same per-pane recovery now covers Codex and Neovim. The most recently
+checkpointed app owns the pane's record; old Claude mappings remain compatible.
+The helper keeps its original `claude-session.py` filename and `claude-panes`
+state directory to preserve those existing records. Use `rex-pane-resume` to
+retry any app, or set `REX_AUTORESTORE=0` to disable automatic restoration.
+
+Codex hooks in `.codex/hooks.json` save the exact thread ID at session start and
+prompt submission. Recovery runs `codex resume <id>` through your normal zsh
+configuration with `--no-daemon` inside Rex. The shared daemon inherits stale
+pane environment variables, so hooks also verify that they descend from the
+pane’s foreground Codex process before recording anything. Existing running
+shared-daemon sessions need reopening for new thread switches to be tracked;
+their current thread can be seeded without interrupting them.
+Codex requires new hooks to be reviewed in `/hooks` on each
+machine; trust only the three recovery commands after reviewing them. Trust
+records are machine-local and are not committed. Codex's `SessionEnd` currently
+reports only `other`, so a delivered end event disables recovery; abrupt power
+loss leaves the last record available. No prompts are automatically submitted.
+See the [Codex hooks reference](https://learn.chatgpt.com/docs/hooks).
+
+Neovim checkpoints its tabs, splits, files, folds and cursor positions every
+five seconds, on focus loss and after writes. Modified regular buffers,
+including unnamed drafts, are saved separately in the private pane record.
+Recovery brings them back as modified buffers without overwriting files on disk.
+It uses `nvim -n` to avoid a stale swap file blocking unattended startup; existing
+swap files are left intact for manual recovery. The last few seconds of edits
+can be lost. Terminal jobs, plugin UI state and undo history aren't checkpointed.
+Normal `:q`/`:qa` exits disable reopening; fatal exits leave the checkpoint active.
+
+Test both helpers and actual Neovim save/recovery with:
+`python3 -m unittest discover -s tests -p 'test_rex_*.py'`.
+The Neovim test expects the dotfiles installed at their usual symlink locations.

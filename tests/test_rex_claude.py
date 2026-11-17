@@ -24,6 +24,9 @@ class Recovery(unittest.TestCase):
             'ANTHROPIC_API_KEY': 'test-only'})
         self.env.start()
         self.addCleanup(self.env.stop)
+        ownership = patch.object(m, 'codex_owns_pane', return_value=True)
+        ownership.start()
+        self.addCleanup(ownership.stop)
         self.instance = 'before-reboot'
         self.shell_pid = 1234
         self.rex = patch.object(m, 'rex', self.fake_rex)
@@ -115,6 +118,43 @@ class Recovery(unittest.TestCase):
         self.instance = 'after-reboot'
         m.restore(1234)
         self.assertEqual(self.run.call_args.args[0][-3:], [str(weird), SID, 'default'])
+
+    def test_codex_replaces_claude_and_resumes_exact_thread(self):
+        self.save()
+        m.save(dict(session_id=OTHER, hook_event_name='SessionStart', cwd=self.tmp.name), 'codex')
+        self.instance = 'after-reboot'
+        m.restore(1234)
+        args = self.run.call_args.args[0]
+        self.assertIn('codex --no-daemon resume "$2"', args[2])
+        self.assertEqual(args[-2], OTHER)
+        self.assertEqual(self.run.call_count, 1)
+
+    def test_shared_codex_daemon_cannot_overwrite_pane(self):
+        self.save()
+        with patch.object(m, 'codex_owns_pane', return_value=False):
+            m.save(dict(session_id=OTHER, hook_event_name='SessionStart', cwd=self.tmp.name), 'codex')
+        self.assertEqual(m.read(m.location()[0])['conversation'], SID)
+
+    def test_codex_exit_disables_recovery(self):
+        m.save(dict(session_id=OTHER, hook_event_name='SessionStart', cwd=self.tmp.name), 'codex')
+        m.save(dict(session_id=OTHER, hook_event_name='SessionEnd', cwd=self.tmp.name, reason='other'), 'codex')
+        self.instance = 'after-reboot'
+        m.restore(1234)
+        self.run.assert_not_called()
+
+    def test_nvim_checkpoint_and_exit(self):
+        m.save(dict(session_id='4567', hook_event_name='SessionStart', cwd=self.tmp.name,
+                    editor={'session':'set number\n', 'buffers':[], 'windows':[]}), 'nvim')
+        self.instance = 'after-reboot'
+        m.restore(1234)
+        args = self.run.call_args.args[0]
+        self.assertEqual(args[0], 'nvim')
+        self.assertEqual(Path(args[3]).read_text(), 'set number\n')
+        self.assertEqual(Path(args[3]).stat().st_mode & 0o777, 0o600)
+        m.save(dict(session_id='4567', hook_event_name='SessionEnd', cwd=self.tmp.name,
+                    reason='prompt_input_exit'), 'nvim')
+        m.restore(1234, force=True)
+        self.assertEqual(self.run.call_count, 1)
 
     def test_private_valid_state(self):
         self.save()

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Save Claude's conversation per Rex pane; resume after a server restart."""
+"""Save Claude, Codex and Neovim per Rex pane; resume after a restart.
+
+The original filename and state directory are kept for existing installations.
+"""
 import contextlib
 import fcntl
 import hashlib
@@ -63,26 +66,52 @@ def write(path, data):
             os.unlink(name)
 
 
-def save(data):
+def codex_owns_pane(session, block):
+    """Shared app servers inherit stale REX_*; only trust the pane's process tree."""
+    process = rex('block', 'call', '-s', session, '-b', block, 'process')
+    foreground = process.get('foreground') or {}
+    if foreground.get('name') != 'codex':
+        return False
+    target, pid = foreground['pid'], os.getppid()
+    for _ in range(32):
+        if pid == target:
+            return True
+        if pid <= 1:
+            return False
+        parent = subprocess.check_output(['ps', '-o', 'ppid=', '-p', str(pid)],
+                                         text=True, timeout=2).strip()
+        if not parent:
+            return False
+        pid = int(parent)
+    return False
+
+
+def save(data, app="claude"):
     where = location()
     if not where:
         return
     path, server, session, block = where
-    sid = str(uuid.UUID(data['session_id']))
+    if app == 'codex' and not codex_owns_pane(session, block):
+        return
+    sid = str(data['session_id']) if app == 'nvim' else str(uuid.UUID(data['session_id']))
     with locked(path):
         previous = read(path)
         event = data['hook_event_name']
         if event == 'SessionEnd':
             # Shutdown/signal exits must remain recoverable. Ignore late exits
             # from an older conversation after /resume or /clear.
-            if (previous.get('claude_session') == sid and
-                    data.get('reason') in ('prompt_input_exit', 'logout', 'clear', 'resume')):
+            if (previous.get('app', 'claude') == app and
+                    previous.get('conversation', previous.get('claude_session')) == sid and
+                    (data.get('reason') in ('prompt_input_exit', 'logout', 'clear', 'resume')
+                     or app == 'codex' and data.get('reason') == 'other')):
                 previous['active'] = False
                 write(path, previous)
             return
         if event not in ('SessionStart', 'UserPromptSubmit'):
             return
-        write(path, dict(version=1, host=server['host_id'], session=session,
+        write(path, dict(version=2, app=app, conversation=sid,
+                         editor=data.get('editor'),
+                         host=server['host_id'], session=session,
                          block=block, claude_session=sid, cwd=data['cwd'],
                          transcript=data.get('transcript_path'), active=True,
                          auth='api' if os.getenv('ANTHROPIC_API_KEY') else 'default',
@@ -107,25 +136,47 @@ def restore(shell_pid, force=False):
         instance = server['instance_id']
         if not force and (data.get('instance') == instance or data.get('attempt') == instance):
             return
-        sid = str(uuid.UUID(data['claude_session']))
+        app = data.get('app', 'claude')
+        sid = data.get('conversation', data.get('claude_session'))
+        if app != 'nvim':
+            sid = str(uuid.UUID(sid))
         if not Path(data['cwd']).is_dir():
             raise ValueError('saved working directory is missing: ' + data['cwd'])
         data['attempt'] = instance
         write(path, data)
-    print('Restoring Claude conversation ' + sid, flush=True)
-    # Positional arguments, never eval saved state. The interactive shell loads
-    # the user's API wrapper; the ordinary command retains subscription auth.
-    command = 'cd -- "$1" || exit; if [[ "$3" == api ]]; then (( $+functions[claude] )) || { print -u2 "Missing claude API wrapper in .zshrc"; exit 1; }; claude --resume "$2"; else command claude --resume "$2"; fi'
-    result = subprocess.run(['zsh', '-ic', command, 'rex-claude-restore',
-                             data['cwd'], sid, data['auth']])
+    print('Restoring ' + app + ' session ' + sid, flush=True)
+    if app == 'nvim':
+        snapshot = path.with_suffix('.vim')
+        # Session text comes only from our local Neovim mksession checkpoint.
+        fd, temporary = tempfile.mkstemp(dir=path.parent)
+        with os.fdopen(fd, 'w') as out:
+            out.write(data['editor']['session'])
+            out.flush()
+            os.fsync(out.fileno())
+        os.replace(temporary, snapshot)
+        env = dict(os.environ, REX_NVIM_RECOVER=str(path))
+        result = subprocess.run(['nvim', '-n', '-S', str(snapshot), '-c',
+                                 "lua require('rex-session').recover()"],
+                                cwd=data['cwd'], env=env)
+    else:
+        # Positional arguments, never eval saved state. Load the user's aliases
+        # and API wrapper without generating a new prompt or model request.
+        if app == 'codex':
+            command = 'cd -- "$1" || exit; codex --no-daemon resume "$2"'
+        elif app == 'claude':
+            command = 'cd -- "$1" || exit; if [[ "$3" == api ]]; then (( $+functions[claude] )) || { print -u2 "Missing claude API wrapper in .zshrc"; exit 1; }; claude --resume "$2"; else command claude --resume "$2"; fi'
+        else:
+            raise ValueError('unknown application: ' + app)
+        result = subprocess.run(['zsh', '-ic', command, 'rex-pane-restore',
+                                 data['cwd'], sid, data['auth']])
     if result.returncode:
-        print('Claude restore failed; use rex-claude-resume to retry.', file=sys.stderr)
+        print('Restore failed; use rex-pane-resume to retry.', file=sys.stderr)
 
 
 def main():
     try:
         if sys.argv[1] == 'hook':
-            save(json.load(sys.stdin))
+            save(json.load(sys.stdin), sys.argv[2] if len(sys.argv) > 2 else 'claude')
         else:
             restore(int(sys.argv[2]), force=sys.argv[1] == 'retry')
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:

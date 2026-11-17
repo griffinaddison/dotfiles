@@ -1615,3 +1615,6 @@ require("lazy").setup({
   -- automatically check for plugin updates
   checker = { enabled = true, notify = false }, -- Notify = false so it doesnt bother me at every startup
 })
+
+-- Reopen this pane's editor layout and unsaved buffers after a Rex restart.
+require('rex-session').setup()
