@@ -207,3 +207,6 @@ alias claude-discord-danger='claude --dangerously-skip-permissions --channels pl
 
 
 alias quickstart_mac="HOST_MACHINE_HOSTNAME=sim-robot-001 USE_CPP_RECORDER=true ./quick_start.sh --dev --vr-on-mac --no-tailscale --no-stain-detection"
+
+# Restore saved Claude conversations when Rex recreates its panes.
+[[ -r "$HOME/.config/rex/claude-restore.zsh" ]] && source "$HOME/.config/rex/claude-restore.zsh"

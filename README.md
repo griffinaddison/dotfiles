@@ -96,3 +96,37 @@ sees them, so "esc" means the top-left key.
 ```bash
 sudo apt-get install -y build-essential gcc make cmake lua5.4 liblua5.4-dev clangd-12 wget && pip install pyright && curl -fsSL https://raw.githubusercontent.com/mklement0/n-install/stable/bin/n-install | bash -s 22 && curl -LO https://github.com/BurntSushi/ripgrep/releases/download/14.1.0/ripgrep_14.1.0-1_amd64.deb && sudo dpkg -i ripgrep_14.1.0-1_amd64.deb && cd ~ && wget https://luarocks.org/releases/luarocks-3.11.1.tar.gz && tar zxpf luarocks-3.11.1.tar.gz && cd luarocks-3.11.1 && ./configure && make && sudo make install && sudo luarocks install luasocket && sudo apt-get install software-properties-common -y && sudo add-apt-repository -y ppa:neovim-ppa/unstable && sudo apt-get update && sudo apt-get install neovim -y && sudo apt-get install tmux -y && git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm && sudo apt-get install stow -y && cd && git clone --recurse-submodules https://github.com/griffinaddison/dotfiles.git ~/.dotfiles && cd ~/.dotfiles && stow .
 ```
+
+### Claude conversations in Rex after a reboot
+
+Rex's configuration lives in `.config/rex/init.lua`. Rex restores layouts, but
+currently starts fresh shells instead of restoring the programs inside them.
+The Claude hooks in `.claude/settings.json` and the first-prompt hook sourced
+by `.zshrc` restore the conversation associated with each pane.
+
+`SessionStart` and `UserPromptSubmit` save the exact conversation ID, working
+directory and auth mode under `${XDG_STATE_HOME:-~/.local/state}/rex/claude-panes`.
+Records are private, atomically replaced and flushed to disk; no credentials or
+conversation text are copied. Rex host, session and block IDs keep panes separate.
+When a pane's original zsh starts under a new Rex server instance, it resumes
+that ID once. Ordinary nested shells and agent subprocesses do not restore it.
+
+Intentional exits, logout and conversation switches deactivate the old mapping;
+the next SessionStart records the replacement. Crashes and shutdown exits stay
+recoverable. A failed launch leaves a shell instead of retrying endlessly.
+Use `rex-claude-resume` in that pane to retry. Set `REX_CLAUDE_AUTORESTORE=0`
+before opening a shell to disable automatic restoration.
+
+Requires zsh, Python 3 and Rex on PATH, and the usual dotfile symlinks. API sessions
+use the `claude` function from your `.zshrc`; subscription/default sessions use
+`command claude`. Authentication remains machine-local. Existing running sessions
+are saved on their next prompt submission; newly started/resumed sessions are
+saved immediately. State is local to each machine and is not committed to git.
+
+This restores saved conversations, not interrupted shell jobs, subagents,
+terminal scrollback, or external connections. A reboot can still lose transcript
+writes that Claude had not flushed. No server restart is needed to install it.
+
+Validation: `python3 -m unittest discover -s tests -p test_rex_claude.py`.
+References: [Rex restart behavior](https://www.superlogical.com/rex/docs/linux/upgrading)
+and [Claude session hooks](https://code.claude.com/docs/en/hooks#sessionstart).

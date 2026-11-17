@@ -72,6 +72,15 @@
             "command": "~/.claude/hooks/cc-tmux-init.sh"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.config/rex/claude-session.py\" hook",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
@@ -83,6 +92,15 @@
             "command": "~/.claude/hooks/cc-tmux-init.sh"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.config/rex/claude-session.py\" hook",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "Stop": [
@@ -92,6 +110,17 @@
           {
             "type": "command",
             "command": "dir=$(basename \"$PWD\") && case \"$OSTYPE\" in darwin*) osascript -e \"display notification \\\"Task complete\\\" with title \\\"claude@$dir\\\"\" ;; *) notify-send \"claude@$dir\" \"Task complete\" 2>/dev/null ;; esac; printf '\\a'"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.config/rex/claude-session.py\" hook",
+            "timeout": 10
           }
         ]
       }
