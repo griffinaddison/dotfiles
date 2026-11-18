@@ -1522,6 +1522,10 @@ require("lazy").setup({
     -- Indenting a numbered item goes 1. -> a. -> i. -> "-".
     -- A "-" list stays "-" at every level.
     vim.g.bullets_outline_levels = { 'num', 'abc', 'rom', 'std-' }
+    -- Only continue a list from a line that is itself an item ("1. x").
+    -- By default a plain line under a list ("1 foo") counts as a wrapped
+    -- part of the item above, so Enter on it added the next number.
+    vim.g.bullets_enable_wrapped_lines = 0
   end,
 },
 

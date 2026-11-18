@@ -47,5 +47,46 @@ rex.bind("ctrl+a>shift+4", "session.rename") -- $
 
 -- Search and prompt jumps (replace copy-mode / and ?)
 rex.bind("ctrl+a>/", "client.find.open")
-rex.bind("ctrl+a>bracketleft", "client.prompt.previous")
 rex.bind("ctrl+a>bracketright", "client.prompt.next")
+
+-- Copy mode, like tmux prefix+[: Rex has no vi copy mode, so open the pane's
+-- screen + scrollback in nvim, zoomed over the pane, cursor at the bottom.
+-- Move and yank with normal vi keys. Yanks reach the Mac clipboard through
+-- nvim's osc52 setup. q quits and the pane closes.
+rex.action{
+  name  = "copy_mode",
+  title = "Copy Mode (scrollback in nvim)",
+  run   = function(ctx)
+    local r = rex.exec({ "rex", "capture", "-s", ctx.session_id, "-b", ctx.block_id, "--unwrap", "--trim" })
+    if not r or not r.ok then error("rex capture failed: " .. tostring(r and r.stderr), 0) end
+    local path = os.tmpname()
+    local f = assert(io.open(path, "w"))
+    f:write(r.stdout)
+    f:close()
+    -- Rex's PATH lacks ~/bin, where nvim lives on hub.
+    local nvim = os.getenv("HOME") .. "/bin/nvim"
+    if not io.open(nvim) then nvim = "nvim" end
+    local _, err = rex.session.new_split{
+      anchor_id = ctx.block_id,
+      direction = "vertical",
+      side      = "after",
+      focus     = true,
+      layout    = { block = {
+        flavor  = "com.superlogical.terminal.shell",
+        label   = "copy",
+        options = { command = {
+          nvim, "-R", "-n", "+normal G",
+          "+setlocal nomodifiable nonumber norelativenumber",
+          "+nnoremap <buffer> q <cmd>qa!<cr>",
+          "+autocmd VimLeave * call delete('" .. path .. "')",
+          path,
+        } },
+      } },
+    }
+    if err ~= nil then error(err, 0) end
+    rex.invoke("pane.zoom")
+  end,
+}
+rex.bind("ctrl+a>bracketleft", "copy_mode")
+-- Prompt jumps moved off prefix+[ (now copy mode).
+rex.bind("ctrl+a>shift+bracketleft", "client.prompt.previous")

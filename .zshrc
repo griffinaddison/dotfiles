@@ -204,6 +204,23 @@ alias sq='squeue -p a3mega -o "%.10i %.15u %.8T %.10M %.5D %.5C %.20N" --sort=S'
 # Claude Code
 alias claude-discord-danger='claude --dangerously-skip-permissions --channels plugin:discord@claude-plugins-official'
 
+# `claude` runs on the claude.ai subscription (the default).
+# `claude-api` bills the platform API key (startup credits) instead.
+# Key + workspace id live in ~/.config/claude-api.env (0600, gitignored). The
+# key isn't workspace-scoped, so every request needs the workspace header.
+claude-api() {
+    local env_file="$HOME/.config/claude-api.env"
+    [[ -r "$env_file" ]] || { print -u2 "claude-api: missing $env_file"; return 1; }
+    local key ws
+    key="$(grep -E '^ANTHROPIC_API_KEY=' "$env_file" | tail -1 | cut -d= -f2-)"
+    ws="$(grep -E '^ANTHROPIC_WORKSPACE_ID=' "$env_file" | tail -1 | cut -d= -f2-)"
+    # ENABLE_CLAUDEAI_MCP_SERVERS=false skips the connectors (they can't work on
+    # an API key anyway) and silences the "connectors are disabled" warning.
+    ANTHROPIC_API_KEY="$key" ANTHROPIC_CUSTOM_HEADERS="anthropic-workspace-id: $ws" \
+        ENABLE_CLAUDEAI_MCP_SERVERS=false command claude "$@"
+}
+alias claude-sub='command claude'  # old name; plain `claude` does the same now
+
 
 
 alias quickstart_mac="HOST_MACHINE_HOSTNAME=sim-robot-001 USE_CPP_RECORDER=true ./quick_start.sh --dev --vr-on-mac --no-tailscale --no-stain-detection"
